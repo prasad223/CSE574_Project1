@@ -208,8 +208,7 @@ nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method=
 w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
 w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 
-
-#Test the computed parameters
+# Test the computed parameters 
 
 predicted_label = nnPredict(w1,w2,train_data)
 
