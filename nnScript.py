@@ -5,8 +5,6 @@ from scipy.optimize import minimize
 from scipy.io import loadmat
 from math import sqrt
 
-
-
 def initializeWeights(n_in,n_out):
     """
     # initializeWeights return the random weights for Neural Network given the
@@ -28,7 +26,7 @@ def sigmoid(z):
     """# Notice that z can be a scalar, a vector or a matrix
     # return the sigmoid of input z"""
     
-    return  #your code here
+    return 1.0 / (1.0 + np.exp(-1.0 * np.array(z))) #Calculates sigmoid of each element in the scalar/vector/matrix
 
 def preprocess():
     """ Input:
@@ -61,7 +59,9 @@ def preprocess():
     zero_features = set()
 
     mat = loadmat('mnist_all.mat') #loads the MAT object as a Dictionary
-    
+
+    # Data partition into the validation and training matrix - https://piazza.com/class/ii0wz7uvsf112m?cid=139
+
     #Pick a reasonable size for validation data
     
     for key, value in mat.iteritems():
@@ -162,8 +162,8 @@ def nnPredict(w1,w2,data):
     %     w1(i, j) represents the weight of connection from unit i in input 
     %     layer to unit j in hidden layer.
     % w2: matrix of weights of connections from hidden layer to output layers.
-    %     w2(i, j) represents the weight of connection from unit i in input 
-    %     layer to unit j in hidden layer.
+    %     w2(i, j) represents the weight of connection from unit i in hidden
+    %     layer to unit j in output layer.
     % data: matrix of data. Each row of this matrix represents the feature 
     %       vector of a particular image
        
@@ -171,7 +171,10 @@ def nnPredict(w1,w2,data):
     % label: a column vector of predicted labels""" 
     
     labels = np.array([])
-    #Your code here
+    # Your code here
+
+    # Your solution should be able to consider each row as the input vector x and do the forward pass of the
+    # neural network and output the class for which the output (ol) is maximum.
     
     return labels
     
@@ -211,7 +214,7 @@ args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 
 opts = {'maxiter' : 50}    # Preferred value.
 
-nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args,method='CG', options=opts)
+nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method='CG', options=opts)
 
 #In Case you want to use fmin_cg, you may have to split the nnObjectFunction to two functions nnObjFunctionVal
 #and nnObjGradient. Check documentation for this function before you proceed.
@@ -222,8 +225,7 @@ nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args,method='
 w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
 w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 
-
-#Test the computed parameters
+# Test the computed parameters
 
 predicted_label = nnPredict(w1,w2,train_data)
 
