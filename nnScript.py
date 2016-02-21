@@ -59,7 +59,9 @@ def preprocess():
      - feature selection"""
     
     mat = loadmat('mnist_all.mat') #loads the MAT object as a Dictionary
-    
+
+    # Data partition into the validation and training matrix - https://piazza.com/class/ii0wz7uvsf112m?cid=139
+
     #Pick a reasonable size for validation data
     
     
@@ -157,7 +159,10 @@ def nnPredict(w1,w2,data):
     % label: a column vector of predicted labels""" 
     
     labels = np.array([])
-    #Your code here
+    # Your code here
+
+    # Your solution should be able to consider each row as the input vector x and do the forward pass of the
+    # neural network and output the class for which the output (ol) is maximum.
     
     return labels
     
@@ -208,7 +213,7 @@ nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method=
 w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
 w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 
-# Test the computed parameters 
+# Test the computed parameters
 
 predicted_label = nnPredict(w1,w2,train_data)
 
