@@ -1,7 +1,10 @@
+#!/usr/bin/env python
+from __future__ import print_function
 import numpy as np
 from scipy.optimize import minimize
 from scipy.io import loadmat
 from math import sqrt
+
 
 
 def initializeWeights(n_in,n_out):
@@ -20,16 +23,12 @@ def initializeWeights(n_in,n_out):
     W = (np.random.rand(n_out, n_in + 1)*2* epsilon) - epsilon;
     return W
     
-    
-    
 def sigmoid(z):
     
     """# Notice that z can be a scalar, a vector or a matrix
     # return the sigmoid of input z"""
     
     return  #your code here
-    
-    
 
 def preprocess():
     """ Input:
@@ -58,10 +57,25 @@ def preprocess():
      - normalize the data to [0, 1]
      - feature selection"""
     
+    # list to record all the features that are zero for now
+    zero_features = set()
+
     mat = loadmat('mnist_all.mat') #loads the MAT object as a Dictionary
     
     #Pick a reasonable size for validation data
     
+    for key, value in mat.iteritems():
+      if not key.startswith("__"):  # 'test' in key or 'train'  in key:
+        print("number of samples for ",key," : ",len(value))
+        for data in value:
+          featureVector = [int(n) for n in str(data).replace('\n','').strip('[').strip(']').strip().split()]
+          print "num_features: ",len(featureVector)
+          for j in range(len(featureVector)):
+            if featureVector[j] == 0:
+              zero_features.add(j)
+            elif j in zero_features:
+              zero_features.remove(j)
+    print(zero_features)
     
     #Your code here
     train_data = np.array([])
@@ -176,9 +190,9 @@ n_input = train_data.shape[1];
 
 # set the number of nodes in hidden unit (not including bias unit)
 n_hidden = 50;
-				   
+                   
 # set the number of nodes in output unit
-n_class = 10;				   
+n_class = 10;                  
 
 # initialize the weights into some random matrices
 initial_w1 = initializeWeights(n_input, n_hidden);
