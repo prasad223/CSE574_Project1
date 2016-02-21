@@ -69,7 +69,7 @@ def preprocess():
         print("number of samples for ",key," : ",len(value))
         for data in value:
           featureVector = [int(n) for n in str(data).replace('\n','').strip('[').strip(']').strip().split()]
-          print "num_features: ",len(featureVector)
+          #print("num_features: ",len(featureVector))
           for j in range(len(featureVector)):
             if featureVector[j] == 0:
               zero_features.add(j)
