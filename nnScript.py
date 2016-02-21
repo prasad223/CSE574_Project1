@@ -148,8 +148,8 @@ def nnPredict(w1,w2,data):
     %     w1(i, j) represents the weight of connection from unit i in input 
     %     layer to unit j in hidden layer.
     % w2: matrix of weights of connections from hidden layer to output layers.
-    %     w2(i, j) represents the weight of connection from unit i in input 
-    %     layer to unit j in hidden layer.
+    %     w2(i, j) represents the weight of connection from unit i in hidden
+    %     layer to unit j in output layer.
     % data: matrix of data. Each row of this matrix represents the feature 
     %       vector of a particular image
        
@@ -197,7 +197,7 @@ args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 
 opts = {'maxiter' : 50}    # Preferred value.
 
-nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args,method='CG', options=opts)
+nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method='CG', options=opts)
 
 #In Case you want to use fmin_cg, you may have to split the nnObjectFunction to two functions nnObjFunctionVal
 #and nnObjGradient. Check documentation for this function before you proceed.
@@ -208,8 +208,7 @@ nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args,method='
 w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
 w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 
-
-#Test the computed parameters
+# Test the computed parameters 
 
 predicted_label = nnPredict(w1,w2,train_data)
 
