@@ -70,7 +70,7 @@ def preprocess():
         print("number of samples for ",key," : ",len(value))
         for data in value:
           featureVector = [int(n) for n in str(data).replace('\n','').strip('[').strip(']').strip().split()]
-          print "num_features: ",len(featureVector)
+          print ("num_features: ",len(featureVector))
           for j in range(len(featureVector)):
             if featureVector[j] == 0:
               zero_features.add(j)
@@ -172,29 +172,43 @@ def nnPredict(w1,w2,data):
     % Output: 
     % label: a column vector of predicted labels"""
 
-    """
-    % creates a column containing only 1's with number of rows as size of feature vector of image
-    % This is for introducing the d+1 node in the input layer
 
-    """
-    oneColumn = np.ones((np.array(data).shape[0],1), dtype = int)
-    data = np.column_stack([data, oneColumn])            # Append a new column to existing matrix
-    print(np.shape(w2))
-    z = sigmoid(np.dot(data,w1.transpose()))             #Calculate z = w1T.x at hidden layer and apply the sigmoid function
-    oneColumn2 = np.ones((np.array(z).shape[0],1), dtype = int) #Column of 1's for simulating the bias node at hidden layer
-    z = np.column_stack([z, oneColumn2])                 # Append a new column to existing matrix
-    o = sigmoid(np.dot(z,w2.transpose()))                #Calculate o = w2T.z at output layer and apply the sigmoid function
+    # creates a column containing only 1's with number of rows as size of feature vector of image
+    # This is for introducing the d+1 node in the input layer
+    ones_column = np.ones((np.array(data).shape[0], 1), dtype = int)
+    # Append a new column to existing matrix
+    data = np.column_stack([data, ones_column])
+    #Calculate z = w1T.x at hidden layer and apply the sigmoid function
+    z = sigmoid(np.dot(data, w1.transpose()))
 
-    matx = np.arange(10).reshape(2,5)
-    print(matx)
-    indMatx = np.argmax(o, axis = 1)                #Calculate the max in every row which gives the actual digit recognized
-    resMatx = np.zeros(np.shape(indMatx),dtype = int)   # Create a matrix of zeros to create the label later
-    i = 0       #Counter to keep track of index of column with max value in each row of indices matrix indMatx
-    for row in range(resMatx.shape[0]):
-        resMatx[row][indMatx[i]] = 1
+
+    #Column of 1's for simulating the bias node at hidden layer
+    one_column2 = np.ones((np.array(z).shape[0],1), dtype = int)
+    # Append a new column to existing matrix
+    z = np.column_stack([z, one_column2])
+    #Calculate o = w2T.z at output layer and apply the sigmoid function
+    o = sigmoid(np.dot(z, w2.transpose()))
+
+
+    #Calculate the max in every row which gives the actual digit recognized
+    ind_matrix = np.argmax(o, axis = 1)
+
+
+    # Create a matrix of zeros to create the label later
+    res_matx = np.zeros(np.shape(ind_matrix), dtype = int)
+
+
+    #Counter to keep track of index of column with max value in each row of indices matrix indMatx
+    i = 0
+
+
+    #Update the corresponding value in each row's index to '1' leaving the others as '0'
+    #so that we label the output to one of the digits 0-9 for each row
+    for row in range(res_matx.shape[0]):
+        res_matx[row][ind_matrix[i]] = 1
         i += 1
 
-    labels = np.array(resMatx)
+    labels = np.array(res_matx)
     # Your code here
 
     # Your solution should be able to consider each row as the input vector x and do the forward pass of the
