@@ -5,6 +5,7 @@ from scipy.optimize import minimize
 from scipy.io import loadmat
 from math import sqrt
 
+# How to run jobs in Metallica https://piazza.com/class/ii0wz7uvsf112m?cid=115
 def initializeWeights(n_in,n_out):
     """
     # initializeWeights return the random weights for Neural Network given the
@@ -69,7 +70,7 @@ def preprocess():
         print("number of samples for ",key," : ",len(value))
         for data in value:
           featureVector = [int(n) for n in str(data).replace('\n','').strip('[').strip(']').strip().split()]
-          #print("num_features: ",len(featureVector))
+          print "num_features: ",len(featureVector)
           for j in range(len(featureVector)):
             if featureVector[j] == 0:
               zero_features.add(j)
@@ -87,9 +88,10 @@ def preprocess():
     
     return train_data, train_label, validation_data, validation_label, test_data, test_label
     
-    
-    
 
+
+# Where do the weights get updated? https://piazza.com/class/ii0wz7uvsf112m?cid=117
+# https://piazza.com/class/ii0wz7uvsf112m?cid=116
 def nnObjFunction(params, *args):
     """% nnObjFunction computes the value of objective function (negative log 
     %   likelihood error function with regularization) given the parameters 
@@ -197,6 +199,9 @@ def nnPredict(w1,w2,data):
 
     # Your solution should be able to consider each row as the input vector x and do the forward pass of the
     # neural network and output the class for which the output (ol) is maximum.
+
+    # Related Piazza posts
+    # https://piazza.com/class/ii0wz7uvsf112m?cid=128
 
     return labels
     
