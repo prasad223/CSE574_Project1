@@ -168,14 +168,36 @@ def nnPredict(w1,w2,data):
     %       vector of a particular image
        
     % Output: 
-    % label: a column vector of predicted labels""" 
-    
-    labels = np.array([])
+    % label: a column vector of predicted labels"""
+
+    """
+    % creates a column containing only 1's with number of rows as size of feature vector of image
+    % This is for introducing the d+1 node in the input layer
+
+    """
+    oneColumn = np.ones((np.array(data).shape[0],1), dtype = int)
+    data = np.column_stack([data, oneColumn])            # Append a new column to existing matrix
+    print(np.shape(w2))
+    z = sigmoid(np.dot(data,w1.transpose()))             #Calculate z = w1T.x at hidden layer and apply the sigmoid function
+    oneColumn2 = np.ones((np.array(z).shape[0],1), dtype = int) #Column of 1's for simulating the bias node at hidden layer
+    z = np.column_stack([z, oneColumn2])                 # Append a new column to existing matrix
+    o = sigmoid(np.dot(z,w2.transpose()))                #Calculate o = w2T.z at output layer and apply the sigmoid function
+
+    matx = np.arange(10).reshape(2,5)
+    print(matx)
+    indMatx = np.argmax(o, axis = 1)                #Calculate the max in every row which gives the actual digit recognized
+    resMatx = np.zeros(np.shape(indMatx),dtype = int)   # Create a matrix of zeros to create the label later
+    i = 0       #Counter to keep track of index of column with max value in each row of indices matrix indMatx
+    for row in range(resMatx.shape[0]):
+        resMatx[row][indMatx[i]] = 1
+        i += 1
+
+    labels = np.array(resMatx)
     # Your code here
 
     # Your solution should be able to consider each row as the input vector x and do the forward pass of the
     # neural network and output the class for which the output (ol) is maximum.
-    
+
     return labels
     
 
