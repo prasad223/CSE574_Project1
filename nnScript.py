@@ -148,6 +148,7 @@ def nnObjFunction(params, *args):
     
     w1 = params[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
     w2 = params[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
+    print(w2,"w2")
     obj_val = 0  
     
     train_with_ones = np.column_stack([training_data, np.ones(training_data.shape[0])])    
@@ -187,7 +188,8 @@ def nnObjFunction(params, *args):
     """
     #Code by Suhas
     deltaL = np.matrix(deltaL)
-    grad_w2 = np.add(np.dot(deltaL.transpose(), z1), lambdaval * w2) * (1/n_input)
+    #pdb.set_trace()
+    grad_w2 = np.add(np.dot(deltaL.transpose(), z1), lambdaval * w2) * (1.0/n_input)
 
     grad_w1 = np.array([])
     temp_sum = np.dot(deltaL, w2)
@@ -198,12 +200,10 @@ def nnObjFunction(params, *args):
 
     grad_w1 = (np.dot(res_mat[np.newaxis].transpose(), np.column_stack([training_data, np.ones(training_data.shape[0])])) + (lambdaval * w1)) /n_input
 
-    print("grad_w1: ",grad_w1.shape)
-    print("grad_w2: ",grad_w2.shape)
-    print("grad_w1.flatten()",grad_w1.flatten().shape)
-    print("grad_w2.flatten()",grad_w2.flatten().shape)
     #Make sure you reshape the gradient matrices to a 1D array. for instance if your gradient matrices are grad_w1 and grad_w2
     #you would use code similar to the one below to create a flat array
+    print(grad_w2, "grad_w2")
+    print(grad_w1[1:10,:20], "grad_w1")
     obj_grad = np.concatenate((np.array(grad_w1).flatten(), np.array(grad_w2).flatten()),0)
     #obj_grad = np.array([])
     
@@ -295,9 +295,6 @@ n_class = 10;
 initial_w1 = initializeWeights(n_input, n_hidden);
 initial_w2 = initializeWeights(n_hidden, n_class);
 
-print(initial_w1.shape,"initial_w1")
-print(initial_w2.shape,"initial_w2")
-
 # unroll 2 weight matrices into single column vector
 initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()),0)
 
@@ -319,10 +316,8 @@ nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method=
 
 
 #Reshape nnParams from 1D vector into w1 and w2 matrices
-#w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
-#w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
-w1 = initial_w1
-w2 = initial_w2
+w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
+w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 
 # Test the computed parameters
 
