@@ -150,16 +150,28 @@ def nnObjFunction(params, *args):
     w2 = params[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
     obj_val = 0  
     
+    train_with_ones = np.column_stack([training_data, np.ones(training_data.shape[0])])    
+    z1 =  sigmoid(np.dot(train_with_ones,w1.T))
+    print("z1 shape: ",z1.shape)
+    z1 = np.column_stack([z1, np.ones(z1.shape[0])])
+    o1 = sigmoid(np.dot(z1, w2.T))
+    print("z1: ",z1.shape," o1: ",o1.shape)
+    y_ol_diff = training_label - o1
+    J = np.sum(np.sum(np.square(y_ol_diff),axis=1)*0.5) * (1.0/n_input)
+    # this will be zero till all the lambda value is initialised 
+    lamb = float(lambdaval) / (2.0 * n_input)
+
+    obj_val = J + (lamb * (np.sum(np.square(w1)) + np.sum(np.square(w2))))
+    
+    # This is vector calculation
+
+    errorL = y_ol_diff * (1 - o1) * o1
+    
     pdb.set_trace()
-    #Your code here
-    #
-    #
-    #
-    #
-    #
-    
-    
-    
+    grad_w2 = (-errorL) * w2
+
+
+
     #Make sure you reshape the gradient matrices to a 1D array. for instance if your gradient matrices are grad_w1 and grad_w2
     #you would use code similar to the one below to create a flat array
     #obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()),0)
