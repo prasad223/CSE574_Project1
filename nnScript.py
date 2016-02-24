@@ -4,6 +4,8 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.io import loadmat
 from math import sqrt
+import sys
+import pdb
 
 # How to run jobs in Metallica https://piazza.com/class/ii0wz7uvsf112m?cid=115
 def initializeWeights(n_in,n_out):
@@ -57,35 +59,47 @@ def preprocess():
      - feature selection"""
     
     # list to record all the features that are zero for now
-    zero_features = set()
-
+    
     mat = loadmat('mnist_all.mat') #loads the MAT object as a Dictionary
 
     # Data partition into the validation and training matrix - https://piazza.com/class/ii0wz7uvsf112m?cid=139
 
     #Pick a reasonable size for validation data
     
-    for key, value in mat.iteritems():
-      if not key.startswith("__"):  # 'test' in key or 'train'  in key:
-        print("number of samples for ",key," : ",len(value))
-        for data in value:
-          featureVector = [int(n) for n in str(data).replace('\n','').strip('[').strip(']').strip().split()]
-          print ("num_features: ",len(featureVector))
-          for j in range(len(featureVector)):
-            if featureVector[j] == 0:
-              zero_features.add(j)
-            elif j in zero_features:
-              zero_features.remove(j)
-    print(zero_features)
-    
-    #Your code here
     train_data = np.array([])
     train_label = np.array([])
     validation_data = np.array([])
     validation_label = np.array([])
     test_data = np.array([])
     test_label = np.array([])
-    
+
+    try:
+     for key, value in mat.iteritems():
+      if not key.startswith("__"):  # 'test' in key or 'train'  in key:
+        #print("number of samples for ",key," : ",len(value))
+        featureData = np.random.permutation(value.astype(np.float64)/255.0)
+        num = int(key[-1])
+        numSamples = value.shape[0]
+        labelData = np.zeros((numSamples,10),dtype = np.uint8)
+        trueLabel = np.ones(numSamples)
+        labelData[:,num] = trueLabel
+        #print("numSamples: ",numSamples," labelData: ",labelData.shape,"featureData: ",featureData.shape," type: ",key)
+        #print("featureData size:",featureData.shape)
+        if 'test' in key:
+          test_data = featureData if test_data.size == 0 else np.vstack([test_data, featureData])
+          test_label = labelData if test_label.size == 0 else np.vstack([test_label, labelData])
+        elif 'train' in key:
+          validation_data = featureData[:1000,:] if validation_data.size == 0 else np.vstack([validation_data,featureData[:1000]])
+          validation_label = labelData[:1000,:] if validation_label.size == 0 else np.vstack([validation_label,labelData[:1000]])
+          train_data = featureData[1000:,:] if train_data.size == 0 else np.vstack([train_data, featureData[1000:]])
+          train_label = labelData[1000:,:] if train_label.size == 0 else np.vstack([train_label, labelData[1000:]])
+    except:
+      e = sys.exc_info()
+      print("error: ",e)
+      pass
+    print("train_data: ",train_data.shape," train_label: ",train_label.shape)
+    print("test_data: ",test_data.shape," test_label: ",test_label.shape)
+    print("validation_data: ",validation_data.shape," validation_label: ",validation_label.shape)
     return train_data, train_label, validation_data, validation_label, test_data, test_label
     
 
@@ -136,23 +150,34 @@ def nnObjFunction(params, *args):
     w2 = params[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
     obj_val = 0  
     
-    #Your code here
-    #
-    #
-    #
-    #
-    #
+    train_with_ones = np.column_stack([training_data, np.ones(training_data.shape[0])])    
+    z1 =  sigmoid(np.dot(train_with_ones,w1.T))
+    print("z1 shape: ",z1.shape)
+    z1 = np.column_stack([z1, np.ones(z1.shape[0])])
+    o1 = sigmoid(np.dot(z1, w2.T))
+    print("z1: ",z1.shape," o1: ",o1.shape)
+    y_ol_diff = training_label - o1
+    J = np.sum(np.sum(np.square(y_ol_diff),axis=1)*0.5) * (1.0/n_input)
+    # this will be zero till all the lambda value is initialised 
+    lamb = float(lambdaval) / (2.0 * n_input)
+
+    obj_val = J + (lamb * (np.sum(np.square(w1)) + np.sum(np.square(w2))))
     
+    # This is vector calculation
+
+    errorL = y_ol_diff * (1 - o1) * o1
     
-    
+    pdb.set_trace()
+    grad_w2 = (-errorL) * w2
+
+
+
     #Make sure you reshape the gradient matrices to a 1D array. for instance if your gradient matrices are grad_w1 and grad_w2
     #you would use code similar to the one below to create a flat array
     #obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()),0)
     obj_grad = np.array([])
     
     return (obj_val,obj_grad)
-
-
 
 def nnPredict(w1,w2,data):
     
@@ -219,9 +244,6 @@ def nnPredict(w1,w2,data):
 
     return labels
     
-
-
-
 """**************Neural Network Script Starts here********************************"""
 
 train_data, train_label, validation_data,validation_label, test_data, test_label = preprocess();
@@ -248,12 +270,12 @@ initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()),0)
 # set the regularization hyper-parameter
 lambdaval = 0;
 
-
 args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 
 #Train Neural Network using fmin_cg or minimize from scipy,optimize module. Check documentation for a working example
 
 opts = {'maxiter' : 50}    # Preferred value.
+
 
 nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method='CG', options=opts)
 
