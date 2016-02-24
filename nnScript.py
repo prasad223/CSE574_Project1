@@ -143,7 +143,7 @@ def nnObjFunction(params, *args):
     % w2: matrix of weights of connections from hidden layer to output layers.
     %     w2(i, j) represents the weight of connection from unit j in hidden 
     %     layer to unit i in output layer."""
-    
+    print("nnObj called ****")
     n_input, n_hidden, n_class, training_data, training_label, lambdaval = args
     
     w1 = params[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
@@ -166,6 +166,7 @@ def nnObjFunction(params, *args):
     # This is vector calculation
 
     deltaL = y_ol_diff * (1 - o1) * o1
+    """
     w2_inter = np.array([])
     for i in range(n_input):
         temp = np.dot(deltaL[i][np.newaxis].T, z1[i][np.newaxis])
@@ -183,13 +184,27 @@ def nnObjFunction(params, *args):
         pdb.set_trace()
         w1_inter = temp_sigma if w1_inter.size == 0 else np.dot(temp_sigma[np.newaxis].T, training_data[i][np.newaxis])
     print(temp_sigma.shape, w1_inter.shape)
-
-
+    """
+    #Code by Suhas
+    deltaL = np.matrix(deltaL)
+    grad_w2 = np.add(np.dot(deltaL.transpose(), z1), lambdaval * w2) * (1/n_input)
 
     grad_w1 = np.array([])
+    temp_sum = np.dot(deltaL, w2)
+    zmat = np.multiply((1-z1), z1)
+    res_mat = np.multiply(zmat, temp_sum)
+    #delete the last column from matrix
+    res_mat = res_mat[:, :-1]
+
+    grad_w1 = (np.dot(res_mat[np.newaxis].transpose(), np.column_stack([training_data, np.ones(training_data.shape[0])])) + (lambdaval * w1)) /n_input
+
+    print("grad_w1: ",grad_w1.shape)
+    print("grad_w2: ",grad_w2.shape)
+    print("grad_w1.flatten()",grad_w1.flatten().shape)
+    print("grad_w2.flatten()",grad_w2.flatten().shape)
     #Make sure you reshape the gradient matrices to a 1D array. for instance if your gradient matrices are grad_w1 and grad_w2
     #you would use code similar to the one below to create a flat array
-    obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()),0)
+    obj_grad = np.concatenate((np.array(grad_w1).flatten(), np.array(grad_w2).flatten()),0)
     #obj_grad = np.array([])
     
     return (obj_val,obj_grad)
@@ -235,8 +250,8 @@ def nnPredict(w1,w2,data):
 
 
     # Create a matrix of zeros to create the label later
-    res_matx = np.zeros(np.shape(ind_matrix), dtype = int)
-
+    #res_matx = np.zeros(np.shape(ind_matrix), dtype = int)
+    res_matx = np.zeros((ind_matrix.shape[0],o.shape[1]))
 
     #Counter to keep track of index of column with max value in each row of indices matrix indMatx
     i = 0
@@ -245,6 +260,7 @@ def nnPredict(w1,w2,data):
     #Update the corresponding value in each row's index to '1' leaving the others as '0'
     #so that we label the output to one of the digits 0-9 for each row
     for row in range(res_matx.shape[0]):
+        #pdb.set_trace()
         res_matx[row][ind_matrix[i]] = 1
         i += 1
 
@@ -279,6 +295,9 @@ n_class = 10;
 initial_w1 = initializeWeights(n_input, n_hidden);
 initial_w2 = initializeWeights(n_hidden, n_class);
 
+print(initial_w1.shape,"initial_w1")
+print(initial_w2.shape,"initial_w2")
+
 # unroll 2 weight matrices into single column vector
 initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()),0)
 
@@ -300,8 +319,10 @@ nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method=
 
 
 #Reshape nnParams from 1D vector into w1 and w2 matrices
-w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
-w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
+#w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
+#w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
+w1 = initial_w1
+w2 = initial_w2
 
 # Test the computed parameters
 
@@ -322,4 +343,4 @@ predicted_label = nnPredict(w1,w2,test_data)
 
 #find the accuracy on Validation Dataset
 
-print('\n Test set Accuracy:' + + str(100*np.mean((predicted_label == test_label).astype(float))) + '%')
+print('\n Test set Accuracy:' + str(100*np.mean((predicted_label == test_label).astype(float))) + '%')
