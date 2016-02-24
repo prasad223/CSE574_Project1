@@ -184,7 +184,7 @@ def nnPredict(w1,w2,data):
 
     #Column of 1's for simulating the bias node at hidden layer
     one_column2 = np.ones((np.array(z).shape[0],1), dtype = int)
-    # Append a new column to existing matrix
+    # Append a new column to existing matrix so that we add the bias node
     z = np.column_stack([z, one_column2])
     #Calculate o = w2T.z at output layer and apply the sigmoid function
     o = sigmoid(np.dot(z, w2.transpose()))
