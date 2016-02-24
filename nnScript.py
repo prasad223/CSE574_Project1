@@ -165,17 +165,32 @@ def nnObjFunction(params, *args):
     
     # This is vector calculation
 
-    errorL = y_ol_diff * (1 - o1) * o1
-    
-    pdb.set_trace()
-    grad_w2 = (-errorL) * w2
+    deltaL = y_ol_diff * (1 - o1) * o1
+    w2_inter = np.array([])
+    for i in range(n_input):
+        temp = np.dot(deltaL[i][np.newaxis].T, z1[i][np.newaxis])
+        w2_inter = temp if w2_inter.size == 0 else np.add(w2_inter,temp)
+    grad_w2 = np.add(w2_inter, w2 * lambdaval) / n_input
+
+    print(grad_w2.shape)
+
+    temp_sigma = np.array([])
+    w1_inter = np.array([])
+    for i in range(n_input):
+        #pdb.set_trace()
+        #for j in range(n_class):
+        temp_sigma = np.sum([deltaL[i,j] * w2[j] for j in range(n_class)],axis=0)
+        pdb.set_trace()
+        w1_inter = temp_sigma if w1_inter.size == 0 else np.dot(temp_sigma[np.newaxis].T, training_data[i][np.newaxis])
+    print(temp_sigma.shape, w1_inter.shape)
 
 
 
+    grad_w1 = np.array([])
     #Make sure you reshape the gradient matrices to a 1D array. for instance if your gradient matrices are grad_w1 and grad_w2
     #you would use code similar to the one below to create a flat array
-    #obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()),0)
-    obj_grad = np.array([])
+    obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()),0)
+    #obj_grad = np.array([])
     
     return (obj_val,obj_grad)
 
