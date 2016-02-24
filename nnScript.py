@@ -6,6 +6,13 @@ from scipy.io import loadmat
 from math import sqrt
 import sys
 import pdb
+import timeit
+
+
+# global counter and timer 
+# Simple counter to keep track of count of  nn_object() being called
+nn_count = 0
+nn_timer = {}
 
 # How to run jobs in Metallica https://piazza.com/class/ii0wz7uvsf112m?cid=115
 def initializeWeights(n_in,n_out):
@@ -102,8 +109,6 @@ def preprocess():
     print("validation_data: ",validation_data.shape," validation_label: ",validation_label.shape)
     return train_data, train_label, validation_data, validation_label, test_data, test_label
     
-
-
 # Where do the weights get updated? https://piazza.com/class/ii0wz7uvsf112m?cid=117
 # https://piazza.com/class/ii0wz7uvsf112m?cid=116
 def nnObjFunction(params, *args):
@@ -143,70 +148,47 @@ def nnObjFunction(params, *args):
     % w2: matrix of weights of connections from hidden layer to output layers.
     %     w2(i, j) represents the weight of connection from unit j in hidden 
     %     layer to unit i in output layer."""
-    print("nnObj called ****")
     n_input, n_hidden, n_class, training_data, training_label, lambdaval = args
-    
+    global nn_count, nn_timer
+    start = timeit.timeit()
     w1 = params[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
     w2 = params[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
-    print(w2,"w2")
-    obj_val = 0  
     
-    train_with_ones = np.column_stack([training_data, np.ones(training_data.shape[0])])    
-    z1 =  sigmoid(np.dot(train_with_ones,w1.T))
-    print("z1 shape: ",z1.shape)
-    z1 = np.column_stack([z1, np.ones(z1.shape[0])])
+    train_data_ones = np.column_stack([training_data, np.ones(training_data.shape[0],dtype = np.float64)])    
+    z1 =  sigmoid(np.dot(train_data_ones,w1.T))
+    z1 = np.column_stack([z1, np.ones(z1.shape[0], dtype = np.float64)])
     o1 = sigmoid(np.dot(z1, w2.T))
-    print("z1: ",z1.shape," o1: ",o1.shape)
     y_ol_diff = training_label - o1
     J = np.sum(np.sum(np.square(y_ol_diff),axis=1)*0.5) * (1.0/n_input)
     # this will be zero till all the lambda value is initialised 
-    lamb = float(lambdaval) / (2.0 * n_input)
-
-    obj_val = J + (lamb * (np.sum(np.square(w1)) + np.sum(np.square(w2))))
+    lamb = lambdaval / (2.0 * n_input)
+    obj_val = J + lamb * (np.square(w1).sum() + np.square(w2).sum()) 
     
     # This is vector calculation
+    deltaL = y_ol_diff * (1 - o1) * o1 # calculation verified upto here
 
-    deltaL = y_ol_diff * (1 - o1) * o1
-    """
-    w2_inter = np.array([])
-    for i in range(n_input):
-        temp = np.dot(deltaL[i][np.newaxis].T, z1[i][np.newaxis])
-        w2_inter = temp if w2_inter.size == 0 else np.add(w2_inter,temp)
-    grad_w2 = np.add(w2_inter, w2 * lambdaval) / n_input
-
-    print(grad_w2.shape)
-
-    temp_sigma = np.array([])
-    w1_inter = np.array([])
-    for i in range(n_input):
-        #pdb.set_trace()
-        #for j in range(n_class):
-        temp_sigma = np.sum([deltaL[i,j] * w2[j] for j in range(n_class)],axis=0)
-        pdb.set_trace()
-        w1_inter = temp_sigma if w1_inter.size == 0 else np.dot(temp_sigma[np.newaxis].T, training_data[i][np.newaxis])
-    print(temp_sigma.shape, w1_inter.shape)
-    """
     #Code by Suhas
-    deltaL = np.matrix(deltaL)
-    #pdb.set_trace()
-    grad_w2 = np.add(np.dot(deltaL.transpose(), z1), lambdaval * w2) * (1.0/n_input)
+    grad_w2 = np.add(np.dot(deltaL.T, z1), lambdaval * w2) * (1.0/n_input)
 
     grad_w1 = np.array([])
     temp_sum = np.dot(deltaL, w2)
     zmat = np.multiply((1-z1), z1)
     res_mat = np.multiply(zmat, temp_sum)
-    #delete the last column from matrix
+    #delete the last column from ind_matrix
     res_mat = res_mat[:, :-1]
 
-    grad_w1 = (np.dot(res_mat[np.newaxis].transpose(), np.column_stack([training_data, np.ones(training_data.shape[0])])) + (lambdaval * w1)) /n_input
-
+    p1 = (np.dot(res_mat.T,  train_data_ones))
+    p2 = (lambdaval * w1)
+    grad_w1 = (p1 + p2)/float(n_input)
+    #pdb.set_trace()
     #Make sure you reshape the gradient matrices to a 1D array. for instance if your gradient matrices are grad_w1 and grad_w2
     #you would use code similar to the one below to create a flat array
-    print(grad_w2, "grad_w2")
-    print(grad_w1[1:10,:20], "grad_w1")
+    #print(grad_w2, "grad_w2")
+    #print(grad_w1[1:10,:20], "grad_w1")
     obj_grad = np.concatenate((np.array(grad_w1).flatten(), np.array(grad_w2).flatten()),0)
-    #obj_grad = np.array([])
-    
+    nn_count += 1
+    nn_timer[nn_count]  = timeit.timeit() - start
+    print("iteration: ",nn_count," time: ",nn_timer[nn_count]," grad_w1: ",grad_w1.sum()," grad_w2: ",grad_w2.sum())
     return (obj_val,obj_grad)
 
 def nnPredict(w1,w2,data):
@@ -278,15 +260,12 @@ def nnPredict(w1,w2,data):
 """**************Neural Network Script Starts here********************************"""
 
 train_data, train_label, validation_data,validation_label, test_data, test_label = preprocess();
-
-
 #  Train Neural Network
-
 # set the number of nodes in input unit (not including bias unit)
 n_input = train_data.shape[1]; 
 
 # set the number of nodes in hidden unit (not including bias unit)
-n_hidden = 50;
+n_hidden = 100;
                    
 # set the number of nodes in output unit
 n_class = 10;                  
@@ -299,14 +278,14 @@ initial_w2 = initializeWeights(n_hidden, n_class);
 initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()),0)
 
 # set the regularization hyper-parameter
-lambdaval = 0;
+lambdaval = 0.5;
+
 
 args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 
 #Train Neural Network using fmin_cg or minimize from scipy,optimize module. Check documentation for a working example
 
 opts = {'maxiter' : 50}    # Preferred value.
-
 
 nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method='CG', options=opts)
 
