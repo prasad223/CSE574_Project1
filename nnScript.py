@@ -1,97 +1,36 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 from __future__ import print_function
 import numpy as np
 from scipy.optimize import minimize
 from scipy.io import loadmat
 from math import sqrt
-import sys
-import pdb
-import timeit
 
-
-# global counter and timer 
-# Simple counter to keep track of count of  nn_object() being called
-nn_count = 0
-nn_timer = {}
-
-# How to run jobs in Metallica https://piazza.com/class/ii0wz7uvsf112m?cid=115
 def initializeWeights(n_in,n_out):
-    """
-    # initializeWeights return the random weights for Neural Network given the
-    # number of node in the input layer and output layer
-
-    # Input:
-    # n_in: number of nodes of the input layer
-    # n_out: number of nodes of the output layer
-       
-    # Output: 
-    # W: matrix of random initial weights with size (n_out x (n_in + 1))"""
-    
-    epsilon = sqrt(6) / sqrt(n_in + n_out + 1);
-    W = (np.random.rand(n_out, n_in + 1)*2* epsilon) - epsilon;
+    epsilon = sqrt(6) / sqrt(n_in + n_out + 1)
+    W = (np.random.rand(n_out, n_in + 1)*2* epsilon) - epsilon
     return W
     
 def sigmoid(z):
-    
-    """# Notice that z can be a scalar, a vector or a matrix
-    # return the sigmoid of input z"""
-    
-    return 1.0 / (1.0 + np.exp(-1.0 * np.array(z))) #Calculates sigmoid of each element in the scalar/vector/matrix
+    return 1.0 / (1.0 + np.exp(-1.0 * np.array(z)))
 
 def preprocess():
-    """ Input:
-     Although this function doesn't have any input, you are required to load
-     the MNIST data set from file 'mnist_all.mat'.
-
-     Output:
-     train_data: matrix of training set. Each row of train_data contains 
-       feature vector of a image
-     train_label: vector of label corresponding to each image in the training
-       set
-     validation_data: matrix of training set. Each row of validation_data 
-       contains feature vector of a image
-     validation_label: vector of label corresponding to each image in the 
-       training set
-     test_data: matrix of training set. Each row of test_data contains 
-       feature vector of a image
-     test_label: vector of label corresponding to each image in the testing
-       set
-
-     Some suggestions for preprocessing step:
-     - divide the original data set to training, validation and testing set
-           with corresponding labels
-     - convert original data set from integer to double by using double()
-           function
-     - normalize the data to [0, 1]
-     - feature selection"""
-    
-    # list to record all the features that are zero for now
-    
     mat = loadmat('mnist_all.mat') #loads the MAT object as a Dictionary
-
     # Data partition into the validation and training matrix - https://piazza.com/class/ii0wz7uvsf112m?cid=139
-
     #Pick a reasonable size for validation data
-    
     train_data = np.array([])
     train_label = np.array([])
     validation_data = np.array([])
     validation_label = np.array([])
     test_data = np.array([])
     test_label = np.array([])
-
-    try:
-     for key, value in mat.iteritems():
-      if not key.startswith("__"):  # 'test' in key or 'train'  in key:
-        #print("number of samples for ",key," : ",len(value))
+    for key, value in mat.iteritems():
+      if not key.startswith("__"):
         featureData = np.random.permutation(value.astype(np.float64)/255.0)
         num = int(key[-1])
         numSamples = value.shape[0]
         labelData = np.zeros((numSamples,10),dtype = np.uint8)
         trueLabel = np.ones(numSamples)
         labelData[:,num] = trueLabel
-        #print("numSamples: ",numSamples," labelData: ",labelData.shape,"featureData: ",featureData.shape," type: ",key)
-        #print("featureData size:",featureData.shape)
         if 'test' in key:
           test_data = featureData if test_data.size == 0 else np.vstack([test_data, featureData])
           test_label = labelData if test_label.size == 0 else np.vstack([test_label, labelData])
@@ -100,13 +39,6 @@ def preprocess():
           validation_label = labelData[:1000,:] if validation_label.size == 0 else np.vstack([validation_label,labelData[:1000]])
           train_data = featureData[1000:,:] if train_data.size == 0 else np.vstack([train_data, featureData[1000:]])
           train_label = labelData[1000:,:] if train_label.size == 0 else np.vstack([train_label, labelData[1000:]])
-    except:
-      e = sys.exc_info()
-      print("error: ",e)
-      pass
-    #print("train_data: ",train_data.shape," train_label: ",train_label.shape)
-    #print("test_data: ",test_data.shape," test_label: ",test_label.shape)
-    #print("validation_data: ",validation_data.shape," validation_label: ",validation_label.shape)
     return train_data, train_label, validation_data, validation_label, test_data, test_label
     
 # Where do the weights get updated? https://piazza.com/class/ii0wz7uvsf112m?cid=117
@@ -116,7 +48,6 @@ def nnObjFunction(params, *args):
     %   likelihood error function with regularization) given the parameters 
     %   of Neural Networks, thetraining data, their corresponding training 
     %   labels and lambda - regularization hyper-parameter.
-
     % Input:
     % params: vector of weights of 2 matrices w1 (weights of connections from
     %     input layer to hidden layer) and w2 (weights of connections from
@@ -132,7 +63,6 @@ def nnObjFunction(params, *args):
     %     in the vector represents the truth label of its corresponding image.
     % lambda: regularization hyper-parameter. This value is used for fixing the
     %     overfitting problem.
-       
     % Output: 
     % obj_val: a scalar value representing value of error function
     % obj_grad: a SINGLE vector of gradient value of error function
@@ -148,89 +78,39 @@ def nnObjFunction(params, *args):
     % w2: matrix of weights of connections from hidden layer to output layers.
     %     w2(i, j) represents the weight of connection from unit j in hidden 
     %     layer to unit i in output layer."""
-    print("===============nnObjFunction:Start================")
     n_input, n_hidden, n_class, training_data, training_label, lambdaval = args
-    global nn_count, nn_timer
-    start = timeit.timeit()
     w1 = params[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
     w2 = params[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
-    # print("w2",w2);
     
     train_data_ones = np.column_stack([training_data, np.ones(training_data.shape[0],dtype = np.float64)]) 
-    n_samples = training_data.shape[0];   
+    n_samples = training_data.shape[0]   
 
     z1 =  sigmoid(np.dot(train_data_ones,w1.T))
     z1 = np.column_stack([z1, np.ones(z1.shape[0], dtype = np.float64)])
-    print("z1",z1[0]);
-
     o1 = sigmoid(np.dot(z1, w2.T))
-    print("o1",o1[0]);
-
-    # Remove the code below
-    ind_matrix = np.argmax(o1, axis = 1)
-    res_matx = np.zeros((ind_matrix.shape[0],o1.shape[1]))
-    i = 0
-    for row in range(res_matx.shape[0]):
-        res_matx[row][ind_matrix[i]] = 1
-        i += 1
-    labels = np.array(res_matx)
-
-    predictDiff(labels, train_label)
 
     y_ol_diff = training_label - o1
     J = np.sum(np.sum(np.square(y_ol_diff),axis=1)*0.5) * (1.0/n_samples)
-    # this will be zero till all the lambda value is initialised 
     lamb = lambdaval / (2.0 * n_samples)
     obj_val = J + lamb * (np.square(w1).sum() + np.square(w2).sum()) 
     
     # This is vector calculation
-    deltaL = y_ol_diff * (1 - o1) * o1 # calculation verified upto here
-
-
-    #Code by Suhas
+    deltaL = y_ol_diff * (1 - o1) * o1
     grad_w2 = np.add(np.dot(-deltaL.T, z1), lambdaval * w2) * (1.0/n_samples)
-
     temp_sum = np.dot(deltaL, w2)
     zmat = np.multiply(-(1-z1), z1)
     res_mat = np.multiply(zmat, temp_sum)
-    #delete the last column from ind_matrix
     res_mat = res_mat[:, :-1]
-
 
     p1 = np.dot(res_mat.T,  train_data_ones)
     p2 = (lambdaval * w1)
     grad_w1 = (p1 + p2)/float(n_samples)
-    #pdb.set_trace()
-    #Make sure you reshape the gradient matrices to a 1D array. for instance if your gradient matrices are grad_w1 and grad_w2
-    #you would use code similar to the one below to create a flat array
-    #print(grad_w2, "grad_w2")
-    #print(grad_w1[1:10,:20], "grad_w1")
     obj_grad = np.concatenate((np.array(grad_w1).flatten(), np.array(grad_w2).flatten()),0)
-    print("input: ",n_input," hidden: ",n_hidden," class: ",n_class)
-    print("w1: shape: ",w1.shape," sum: ",w1.sum(),"\tw2: shape: ",w2.shape," sum: ",w2.sum())
-    #print("TD: shape: ",training_data.shape," sum: ",training_data.sum(),"\tTL: shape: ",training_label.shape," sum: ",training_label.sum())
-    #print("z1: shape: ",z1.shape," sum: ",z1.sum())
-    #print("o1: shape: ",o1.shape," sum: ",o1.sum())
-    #print("y_o_diff: shape: ",y_ol_diff.shape," sum: ",y_ol_diff.sum())
-    print("objval: ",obj_val,"\tJ: ",J)
-    #print("temp_sum: shape: ",temp_sum.shape," sum: ",temp_sum.sum())
-    #print("zmat: shape: ",zmat.shape," sum: ", zmat.sum())
-    #print("res_mat: shape: ",res_mat.shape," sum: ",res_mat.sum())
-    #print("p1: shape: ",p1.shape," sum: ",p1.sum())
-    #print("p2: shape: ",p2.shape," sum: ",p2.sum())
-    print("grad_w1: shape: ",grad_w1.shape," sum: ",grad_w1.sum())
-    print("grad_w2: shape: ",grad_w2.shape," sum: ",grad_w2.sum())
-    nn_count += 1
-    nn_timer[nn_count]  = timeit.timeit() - start
-    print("===============nnObjFunction:Stop================")
-    # pdb.set_trace();
     return (obj_val,obj_grad)
 
 def nnPredict(w1,w2,data):
-    
     """% nnPredict predicts the label of data given the parameter w1, w2 of Neural
     % Network.
-
     % Input:
     % w1: matrix of weights of connections from input layer to hidden layers.
     %     w1(i, j) represents the weight of connection from unit i in input 
@@ -243,93 +123,61 @@ def nnPredict(w1,w2,data):
        
     % Output: 
     % label: a column vector of predicted labels"""
-
-
-    # creates a column containing only 1's with number of rows as size of feature vector of image
-    # This is for introducing the d+1 node in the input layer
     ones_column = np.ones((np.array(data).shape[0], 1), dtype = int)
-    # Append a new column to existing matrix
     data = np.column_stack([data, ones_column])
-    #Calculate z = w1T.x at hidden layer and apply the sigmoid function
     z = sigmoid(np.dot(data, w1.transpose()))
-
-
-    #Column of 1's for simulating the bias node at hidden layer
     one_column2 = np.ones((np.array(z).shape[0],1), dtype = int)
-    # Append a new column to existing matrix so that we add the bias node
     z = np.column_stack([z, one_column2])
-    #Calculate o = w2T.z at output layer and apply the sigmoid function
     o = sigmoid(np.dot(z, w2.transpose()))
-
-
     #Calculate the max in every row which gives the actual digit recognized
     ind_matrix = np.argmax(o, axis = 1)
-
-
-    # Create a matrix of zeros to create the label later
-    #res_matx = np.zeros(np.shape(ind_matrix), dtype = int)
     res_matx = np.zeros((ind_matrix.shape[0],o.shape[1]))
-
     #Counter to keep track of index of column with max value in each row of indices matrix indMatx
     i = 0
-
-
     #Update the corresponding value in each row's index to '1' leaving the others as '0'
     #so that we label the output to one of the digits 0-9 for each row
     for row in range(res_matx.shape[0]):
-        #pdb.set_trace()
         res_matx[row][ind_matrix[i]] = 1
         i += 1
 
     labels = np.array(res_matx)
-    # Your code here
-
-    # Your solution should be able to consider each row as the input vector x and do the forward pass of the
-    # neural network and output the class for which the output (ol) is maximum.
-
-    # Related Piazza posts
-    # https://piazza.com/class/ii0wz7uvsf112m?cid=128
-
+    # Related Piazza posts: https://piazza.com/class/ii0wz7uvsf112m?cid=128
     return labels
     
-
+'''
 def predictDiff(predicted, actual):
   print("number\tactual\tpredicted")
   for i in range(n_class):
     print(i,"\t",np.count_nonzero(actual[:,i]),"\t",np.count_nonzero(predicted[:,i]))
-
+'''
 
 """**************Neural Network Script Starts here********************************"""
 
-train_data, train_label, validation_data,validation_label, test_data, test_label = preprocess();
+train_data, train_label, validation_data,validation_label, test_data, test_label = preprocess()
 #  Train Neural Network
 # set the number of nodes in input unit (not including bias unit)
-n_input = train_data.shape[1]; 
-
+n_input = train_data.shape[1] 
 # set the number of nodes in hidden unit (not including bias unit)
-n_hidden = 8;
+n_hidden = 8
                    
 # set the number of nodes in output unit
-n_class = 10;                  
+n_class = 10                  
 
 # initialize the weights into some random matrices
-initial_w1 = initializeWeights(n_input, n_hidden);
-initial_w2 = initializeWeights(n_hidden, n_class);
+initial_w1 = initializeWeights(n_input, n_hidden)
+initial_w2 = initializeWeights(n_hidden, n_class)
 
 # unroll 2 weight matrices into single column vector
 initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()),0)
 
 # set the regularization hyper-parameter
-lambdaval = 0.0;
+lambdaval = 0.5789
 args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 
 #Train Neural Network using fmin_cg or minimize from scipy,optimize module. Check documentation for a working example
 
 opts = {'maxiter' : 50}    # Preferred value.
 
-print("initial_w1: shape: ",initial_w1.shape," sum: ",initial_w1.sum())
-print("initial_w2: shape: ",initial_w2.shape," sum: ",initial_w2.sum())
-print("lambda: ",lambdaval,"\thidden: ",n_hidden)
 nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method='CG', options=opts)
 
 #In Case you want to use fmin_cg, you may have to split the nnObjectFunction to two functions nnObjFunctionVal
@@ -342,26 +190,17 @@ w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
 w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 
 # Test the computed parameters
-print("num iterations: ",nn_count)
-print("w1: shape: ",w1.shape," sum: ",w1.sum(),"\tw2: shape: ",w2.shape," sum: ",w2.sum())
 predicted_label = nnPredict(w1,w2,train_data)
 
-print("differencing between training predictions")
-predictDiff(predicted_label, train_label)
-
 #find the accuracy on Training Dataset
-print('\n Training set Accuracy:' + str(100*np.mean((predicted_label == train_label).astype(float))) + '%')
+print('\nTraining set Accuracy:' + str(100*np.mean((predicted_label == train_label).astype(float))) + '%')
 predicted_label = nnPredict(w1,w2,validation_data)
-print("differencing between validation predictions")
-predictDiff(predicted_label, validation_label)
 
 #find the accuracy on Validation Dataset
-print('\n Validation set Accuracy:' + str(100*np.mean((predicted_label == validation_label).astype(float))) + '%')
+print('\nValidation set Accuracy:' + str(100*np.mean((predicted_label == validation_label).astype(float))) + '%')
 
 
 predicted_label = nnPredict(w1,w2,test_data)
-print("differencing between testing predictions")
-predictDiff(predicted_label, test_label)
 
 #find the accuracy on Validation Dataset
-print('\n Test set Accuracy:' + str(100*np.mean((predicted_label == test_label).astype(float))) + '%')
+print('\nTest set Accuracy:' + str(100*np.mean((predicted_label == test_label).astype(float))) + '%')
