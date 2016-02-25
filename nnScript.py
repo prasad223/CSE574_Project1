@@ -4,6 +4,7 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.io import loadmat
 from math import sqrt
+from sys import argv
 
 def initializeWeights(n_in,n_out):
     epsilon = sqrt(6) / sqrt(n_in + n_out + 1)
@@ -158,10 +159,10 @@ train_data, train_label, validation_data,validation_label, test_data, test_label
 # set the number of nodes in input unit (not including bias unit)
 n_input = train_data.shape[1] 
 # set the number of nodes in hidden unit (not including bias unit)
-n_hidden = 8
+n_hidden = int(argv[1])
                    
 # set the number of nodes in output unit
-n_class = 10                  
+n_class = train_data.shape[1]                  
 
 # initialize the weights into some random matrices
 initial_w1 = initializeWeights(n_input, n_hidden)
@@ -171,7 +172,7 @@ initial_w2 = initializeWeights(n_hidden, n_class)
 initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()),0)
 
 # set the regularization hyper-parameter
-lambdaval = 0.5789
+lambdaval = float(argv[2])
 args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 
 #Train Neural Network using fmin_cg or minimize from scipy,optimize module. Check documentation for a working example
