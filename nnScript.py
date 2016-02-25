@@ -145,12 +145,17 @@ def nnPredict(w1,w2,data):
     # Related Piazza posts: https://piazza.com/class/ii0wz7uvsf112m?cid=128
     return labels
     
-'''
+
 def predictDiff(predicted, actual):
+  predictions = {}
   print("number\tactual\tpredicted")
-  for i in range(n_class):
-    print(i,"\t",np.count_nonzero(actual[:,i]),"\t",np.count_nonzero(predicted[:,i]))
-'''
+  for i in range(10):
+    ac = np.count_nonzero(actual[:,i])
+    pc = np.count_nonzero(predicted[:,i])
+    predictions[str(i)] = { 'actual' : ac, 'predicted' : pc}
+    print(i,"\t",ac,"\t",pc)
+  return predictions
+
 
 """**************Neural Network Script Starts here********************************"""
 
@@ -162,7 +167,7 @@ n_input = train_data.shape[1]
 n_hidden = int(argv[1])
                    
 # set the number of nodes in output unit
-n_class = train_data.shape[1]                  
+n_class = train_label.shape[1]                  
 
 # initialize the weights into some random matrices
 initial_w1 = initializeWeights(n_input, n_hidden)
@@ -190,18 +195,29 @@ nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method=
 w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
 w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 
+gpredictions = {}
 # Test the computed parameters
 predicted_label = nnPredict(w1,w2,train_data)
 
 #find the accuracy on Training Dataset
 print('\nTraining set Accuracy:' + str(100*np.mean((predicted_label == train_label).astype(float))) + '%')
-predicted_label = nnPredict(w1,w2,validation_data)
+print("Predicting the difference")
+key = '_'.join([argv[1],argv[2],"Training"])
+gpredictions[key] =  predictDiff(predicted_label, train_label)
 
+predicted_label = nnPredict(w1,w2,validation_data)
 #find the accuracy on Validation Dataset
 print('\nValidation set Accuracy:' + str(100*np.mean((predicted_label == validation_label).astype(float))) + '%')
+print("Predicting the difference")
+key = '_'.join([argv[1],argv[2],"Validation"])
+gpredictions[key] = predictDiff(predicted_label, validation_label)
 
 
 predicted_label = nnPredict(w1,w2,test_data)
-
 #find the accuracy on Validation Dataset
 print('\nTest set Accuracy:' + str(100*np.mean((predicted_label == test_label).astype(float))) + '%')
+print("Predicting the difference")
+key = '_'.join([argv[1],argv[2],"Testing"])
+gpredictions[key] = predictDiff(predicted_label, test_label)
+
+print("\n\n\npredictions:\n",gpredictions)
