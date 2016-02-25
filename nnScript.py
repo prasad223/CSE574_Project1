@@ -104,9 +104,9 @@ def preprocess():
       e = sys.exc_info()
       print("error: ",e)
       pass
-    print("train_data: ",train_data.shape," train_label: ",train_label.shape)
-    print("test_data: ",test_data.shape," test_label: ",test_label.shape)
-    print("validation_data: ",validation_data.shape," validation_label: ",validation_label.shape)
+    #print("train_data: ",train_data.shape," train_label: ",train_label.shape)
+    #print("test_data: ",test_data.shape," test_label: ",test_label.shape)
+    #print("validation_data: ",validation_data.shape," validation_label: ",validation_label.shape)
     return train_data, train_label, validation_data, validation_label, test_data, test_label
     
 # Where do the weights get updated? https://piazza.com/class/ii0wz7uvsf112m?cid=117
@@ -154,16 +154,33 @@ def nnObjFunction(params, *args):
     start = timeit.timeit()
     w1 = params[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
     w2 = params[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
+    # print("w2",w2);
     
-    train_data_ones = np.column_stack([training_data, np.ones(training_data.shape[0],dtype = np.float64)])    
+    train_data_ones = np.column_stack([training_data, np.ones(training_data.shape[0],dtype = np.float64)]) 
+    n_samples = training_data.shape[0];   
 
     z1 =  sigmoid(np.dot(train_data_ones,w1.T))
     z1 = np.column_stack([z1, np.ones(z1.shape[0], dtype = np.float64)])
+    print("z1",z1[0]);
+
     o1 = sigmoid(np.dot(z1, w2.T))
+    print("o1",o1[0]);
+
+    # Remove the code below
+    ind_matrix = np.argmax(o1, axis = 1)
+    res_matx = np.zeros((ind_matrix.shape[0],o1.shape[1]))
+    i = 0
+    for row in range(res_matx.shape[0]):
+        res_matx[row][ind_matrix[i]] = 1
+        i += 1
+    labels = np.array(res_matx)
+
+    predictDiff(labels, train_label)
+
     y_ol_diff = training_label - o1
-    J = np.sum(np.sum(np.square(y_ol_diff),axis=1)*0.5) * (1.0/n_input)
+    J = np.sum(np.sum(np.square(y_ol_diff),axis=1)*0.5) * (1.0/n_samples)
     # this will be zero till all the lambda value is initialised 
-    lamb = lambdaval / (2.0 * n_input)
+    lamb = lambdaval / (2.0 * n_samples)
     obj_val = J + lamb * (np.square(w1).sum() + np.square(w2).sum()) 
     
     # This is vector calculation
@@ -171,10 +188,10 @@ def nnObjFunction(params, *args):
 
 
     #Code by Suhas
-    grad_w2 = np.add(np.dot(deltaL.T, z1), lambdaval * w2) * (1.0/n_input)
+    grad_w2 = np.add(np.dot(-deltaL.T, z1), lambdaval * w2) * (1.0/n_samples)
 
     temp_sum = np.dot(deltaL, w2)
-    zmat = np.multiply((1-z1), z1)
+    zmat = np.multiply(-(1-z1), z1)
     res_mat = np.multiply(zmat, temp_sum)
     #delete the last column from ind_matrix
     res_mat = res_mat[:, :-1]
@@ -182,7 +199,7 @@ def nnObjFunction(params, *args):
 
     p1 = np.dot(res_mat.T,  train_data_ones)
     p2 = (lambdaval * w1)
-    grad_w1 = (p1 + p2)/float(n_input)
+    grad_w1 = (p1 + p2)/float(n_samples)
     #pdb.set_trace()
     #Make sure you reshape the gradient matrices to a 1D array. for instance if your gradient matrices are grad_w1 and grad_w2
     #you would use code similar to the one below to create a flat array
@@ -206,6 +223,7 @@ def nnObjFunction(params, *args):
     nn_count += 1
     nn_timer[nn_count]  = timeit.timeit() - start
     print("===============nnObjFunction:Stop================")
+    # pdb.set_trace();
     return (obj_val,obj_grad)
 
 def nnPredict(w1,w2,data):
@@ -333,7 +351,6 @@ predictDiff(predicted_label, train_label)
 
 #find the accuracy on Training Dataset
 print('\n Training set Accuracy:' + str(100*np.mean((predicted_label == train_label).astype(float))) + '%')
-pdb.set_trace()
 predicted_label = nnPredict(w1,w2,validation_data)
 print("differencing between validation predictions")
 predictDiff(predicted_label, validation_label)
