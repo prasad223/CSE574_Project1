@@ -3,7 +3,7 @@
 hc=0
 script_name="nnScript.py"
 file_pre="out_"
-for((hc=0;hc<=20;hc++))
+for((hc=4;hc<=20;hc++))
 do
   for((l=0;l<10;l++))
   do
