@@ -191,16 +191,16 @@ def nnObjFunction(params, *args):
     obj_grad = np.concatenate((np.array(grad_w1).flatten(), np.array(grad_w2).flatten()),0)
     print("input: ",n_input," hidden: ",n_hidden," class: ",n_class)
     print("w1: shape: ",w1.shape," sum: ",w1.sum(),"\tw2: shape: ",w2.shape," sum: ",w2.sum())
-    print("TD: shape: ",training_data.shape," sum: ",training_data.sum(),"\tTL: shape: ",training_label.shape," sum: ",training_label.sum())
-    print("z1: shape: ",z1.shape," sum: ",z1.sum())
-    print("o1: shape: ",o1.shape," sum: ",o1.sum())
-    print("y_o_diff: shape: ",y_ol_diff.shape," sum: ",y_ol_diff.sum())
+    #print("TD: shape: ",training_data.shape," sum: ",training_data.sum(),"\tTL: shape: ",training_label.shape," sum: ",training_label.sum())
+    #print("z1: shape: ",z1.shape," sum: ",z1.sum())
+    #print("o1: shape: ",o1.shape," sum: ",o1.sum())
+    #print("y_o_diff: shape: ",y_ol_diff.shape," sum: ",y_ol_diff.sum())
     print("objval: ",obj_val,"\tJ: ",J)
-    print("temp_sum: shape: ",temp_sum.shape," sum: ",temp_sum.sum())
-    print("zmat: shape: ",zmat.shape," sum: ", zmat.sum())
-    print("res_mat: shape: ",res_mat.shape," sum: ",res_mat.sum())
-    print("p1: shape: ",p1.shape," sum: ",p1.sum())
-    print("p2: shape: ",p2.shape," sum: ",p2.sum())
+    #print("temp_sum: shape: ",temp_sum.shape," sum: ",temp_sum.sum())
+    #print("zmat: shape: ",zmat.shape," sum: ", zmat.sum())
+    #print("res_mat: shape: ",res_mat.shape," sum: ",res_mat.sum())
+    #print("p1: shape: ",p1.shape," sum: ",p1.sum())
+    #print("p2: shape: ",p2.shape," sum: ",p2.sum())
     print("grad_w1: shape: ",grad_w1.shape," sum: ",grad_w1.sum())
     print("grad_w2: shape: ",grad_w2.shape," sum: ",grad_w2.sum())
     nn_count += 1
@@ -274,6 +274,13 @@ def nnPredict(w1,w2,data):
 
     return labels
     
+
+def predictDiff(predicted, actual):
+  print("number\tactual\tpredicted")
+  for i in range(n_class):
+    print(i,"\t",np.count_nonzero(actual[:,i]),"\t",np.count_nonzero(predicted[:,i]))
+
+
 """**************Neural Network Script Starts here********************************"""
 
 train_data, train_label, validation_data,validation_label, test_data, test_label = preprocess();
@@ -321,19 +328,23 @@ print("num iterations: ",nn_count)
 print("w1: shape: ",w1.shape," sum: ",w1.sum(),"\tw2: shape: ",w2.shape," sum: ",w2.sum())
 predicted_label = nnPredict(w1,w2,train_data)
 
+print("differencing between training predictions")
+predictDiff(predicted_label, train_label)
+
 #find the accuracy on Training Dataset
-
 print('\n Training set Accuracy:' + str(100*np.mean((predicted_label == train_label).astype(float))) + '%')
-
+pdb.set_trace()
 predicted_label = nnPredict(w1,w2,validation_data)
+print("differencing between validation predictions")
+predictDiff(predicted_label, validation_label)
 
 #find the accuracy on Validation Dataset
-
 print('\n Validation set Accuracy:' + str(100*np.mean((predicted_label == validation_label).astype(float))) + '%')
 
 
 predicted_label = nnPredict(w1,w2,test_data)
+print("differencing between testing predictions")
+predictDiff(predicted_label, test_label)
 
 #find the accuracy on Validation Dataset
-
 print('\n Test set Accuracy:' + str(100*np.mean((predicted_label == test_label).astype(float))) + '%')
