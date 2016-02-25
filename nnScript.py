@@ -148,12 +148,12 @@ def nnPredict(w1,w2,data):
 
 def predictDiff(predicted, actual):
   predictions = {}
-  print("number\tactual\tpredicted")
+  #print("number\tactual\tpredicted")
   for i in range(10):
     ac = np.count_nonzero(actual[:,i])
     pc = np.count_nonzero(predicted[:,i])
     predictions[str(i)] = { 'actual' : ac, 'predicted' : pc}
-    print(i,"\t",ac,"\t",pc)
+    #print(i,"\t",ac,"\t",pc)
   return predictions
 
 
@@ -196,28 +196,28 @@ w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
 w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 
 gpredictions = {}
+key = '_'.join(argv[1:])
+
+temp = {}
 # Test the computed parameters
 predicted_label = nnPredict(w1,w2,train_data)
 
 #find the accuracy on Training Dataset
-print('\nTraining set Accuracy:' + str(100*np.mean((predicted_label == train_label).astype(float))) + '%')
-print("Predicting the difference")
-key = '_'.join([argv[1],argv[2],"Training"])
-gpredictions[key] =  predictDiff(predicted_label, train_label)
+accuracy = str(100*np.mean((predicted_label == train_label).astype(float)))
+print('\nTraining set Accuracy:' + accuracy + '%')
+temp["Training"] = { 'predictions': predictDiff(predicted_label, train_label), 'accuracy' :accuracy }
 
 predicted_label = nnPredict(w1,w2,validation_data)
+accuracy = str(100*np.mean((predicted_label == validation_label).astype(float)))
 #find the accuracy on Validation Dataset
-print('\nValidation set Accuracy:' + str(100*np.mean((predicted_label == validation_label).astype(float))) + '%')
-print("Predicting the difference")
-key = '_'.join([argv[1],argv[2],"Validation"])
-gpredictions[key] = predictDiff(predicted_label, validation_label)
+print('\nValidation set Accuracy:' + accuracy + '%')
+temp["Validation"] ={ 'predictions' :predictDiff(predicted_label, validation_label), 'accuracy' :accuracy }
 
 
 predicted_label = nnPredict(w1,w2,test_data)
+accuracy = str(100*np.mean((predicted_label == test_label).astype(float)))
 #find the accuracy on Validation Dataset
-print('\nTest set Accuracy:' + str(100*np.mean((predicted_label == test_label).astype(float))) + '%')
-print("Predicting the difference")
-key = '_'.join([argv[1],argv[2],"Testing"])
-gpredictions[key] = predictDiff(predicted_label, test_label)
-
+print('\nTest set Accuracy:' + accuracy + '%')
+temp["Testing"] ={ 'predictions' : predictDiff(predicted_label, test_label), 'accuracy' :accuracy }
+gpredictions[key] = temp
 print("\n\n\npredictions:\n",gpredictions)
