@@ -148,6 +148,7 @@ def nnObjFunction(params, *args):
     % w2: matrix of weights of connections from hidden layer to output layers.
     %     w2(i, j) represents the weight of connection from unit j in hidden 
     %     layer to unit i in output layer."""
+    print("===============nnObjFunction:Start================")
     n_input, n_hidden, n_class, training_data, training_label, lambdaval = args
     global nn_count, nn_timer
     start = timeit.timeit()
@@ -155,6 +156,7 @@ def nnObjFunction(params, *args):
     w2 = params[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
     
     train_data_ones = np.column_stack([training_data, np.ones(training_data.shape[0],dtype = np.float64)])    
+
     z1 =  sigmoid(np.dot(train_data_ones,w1.T))
     z1 = np.column_stack([z1, np.ones(z1.shape[0], dtype = np.float64)])
     o1 = sigmoid(np.dot(z1, w2.T))
@@ -167,17 +169,18 @@ def nnObjFunction(params, *args):
     # This is vector calculation
     deltaL = y_ol_diff * (1 - o1) * o1 # calculation verified upto here
 
+
     #Code by Suhas
     grad_w2 = np.add(np.dot(deltaL.T, z1), lambdaval * w2) * (1.0/n_input)
 
-    grad_w1 = np.array([])
     temp_sum = np.dot(deltaL, w2)
     zmat = np.multiply((1-z1), z1)
     res_mat = np.multiply(zmat, temp_sum)
     #delete the last column from ind_matrix
     res_mat = res_mat[:, :-1]
 
-    p1 = (np.dot(res_mat.T,  train_data_ones))
+
+    p1 = np.dot(res_mat.T,  train_data_ones)
     p2 = (lambdaval * w1)
     grad_w1 = (p1 + p2)/float(n_input)
     #pdb.set_trace()
@@ -186,9 +189,23 @@ def nnObjFunction(params, *args):
     #print(grad_w2, "grad_w2")
     #print(grad_w1[1:10,:20], "grad_w1")
     obj_grad = np.concatenate((np.array(grad_w1).flatten(), np.array(grad_w2).flatten()),0)
+    print("input: ",n_input," hidden: ",n_hidden," class: ",n_class)
+    print("w1: shape: ",w1.shape," sum: ",w1.sum(),"\tw2: shape: ",w2.shape," sum: ",w2.sum())
+    print("TD: shape: ",training_data.shape," sum: ",training_data.sum(),"\tTL: shape: ",training_label.shape," sum: ",training_label.sum())
+    print("z1: shape: ",z1.shape," sum: ",z1.sum())
+    print("o1: shape: ",o1.shape," sum: ",o1.sum())
+    print("y_o_diff: shape: ",y_ol_diff.shape," sum: ",y_ol_diff.sum())
+    print("objval: ",obj_val,"\tJ: ",J)
+    print("temp_sum: shape: ",temp_sum.shape," sum: ",temp_sum.sum())
+    print("zmat: shape: ",zmat.shape," sum: ", zmat.sum())
+    print("res_mat: shape: ",res_mat.shape," sum: ",res_mat.sum())
+    print("p1: shape: ",p1.shape," sum: ",p1.sum())
+    print("p2: shape: ",p2.shape," sum: ",p2.sum())
+    print("grad_w1: shape: ",grad_w1.shape," sum: ",grad_w1.sum())
+    print("grad_w2: shape: ",grad_w2.shape," sum: ",grad_w2.sum())
     nn_count += 1
     nn_timer[nn_count]  = timeit.timeit() - start
-    print("iteration: ",nn_count," time: ",nn_timer[nn_count]," grad_w1: ",grad_w1.sum()," grad_w2: ",grad_w2.sum())
+    print("===============nnObjFunction:Stop================")
     return (obj_val,obj_grad)
 
 def nnPredict(w1,w2,data):
@@ -265,7 +282,7 @@ train_data, train_label, validation_data,validation_label, test_data, test_label
 n_input = train_data.shape[1]; 
 
 # set the number of nodes in hidden unit (not including bias unit)
-n_hidden = 100;
+n_hidden = 8;
                    
 # set the number of nodes in output unit
 n_class = 10;                  
@@ -278,15 +295,16 @@ initial_w2 = initializeWeights(n_hidden, n_class);
 initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()),0)
 
 # set the regularization hyper-parameter
-lambdaval = 0.5;
-
-
+lambdaval = 0.0;
 args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 
 #Train Neural Network using fmin_cg or minimize from scipy,optimize module. Check documentation for a working example
 
 opts = {'maxiter' : 50}    # Preferred value.
 
+print("initial_w1: shape: ",initial_w1.shape," sum: ",initial_w1.sum())
+print("initial_w2: shape: ",initial_w2.shape," sum: ",initial_w2.sum())
+print("lambda: ",lambdaval,"\thidden: ",n_hidden)
 nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method='CG', options=opts)
 
 #In Case you want to use fmin_cg, you may have to split the nnObjectFunction to two functions nnObjFunctionVal
@@ -299,7 +317,8 @@ w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
 w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 
 # Test the computed parameters
-
+print("num iterations: ",nn_count," each iteration time: ",nn_timer)
+print("w1: shape: ",w1.shape," sum: ",w1.sum(),"\tw2: shape: ",w2.shape," sum: ",w2.sum())
 predicted_label = nnPredict(w1,w2,train_data)
 
 #find the accuracy on Training Dataset
