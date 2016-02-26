@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+.tags*
+nohup.out
 #Intellij idea files
 .idea
 

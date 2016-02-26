@@ -5,6 +5,7 @@ from scipy.optimize import minimize
 from scipy.io import loadmat
 from math import sqrt
 from sys import argv
+from scipy.special import expit
 
 def initializeWeights(n_in,n_out):
     epsilon = sqrt(6) / sqrt(n_in + n_out + 1)
@@ -12,12 +13,35 @@ def initializeWeights(n_in,n_out):
     return W
     
 def sigmoid(z):
-    return 1.0 / (1.0 + np.exp(-1.0 * np.array(z)))
+    return expit(z) #1.0 / (1.0 + np.exp(-1.0 * np.array(z)))
+
+def featureSelection(train_data, validation_data, test_data):
+    num_features = train_data.shape[1]
+    assert(validation_data.shape[1] == num_features)
+    assert(test_data.shape[1] == num_features)
+    column_indexes = np.arange(num_features)
+    same_bool = np.all(train_data == train_data[0,:], axis = 0)
+    train_same = column_indexes[same_bool]
+    same_bool = np.all(validation_data == validation_data[0,:], axis = 0)
+    val_same = column_indexes[same_bool]
+    same_bool = np.all(test_data == test_data[0,:], axis = 0)
+    test_same = column_indexes[same_bool]
+    common_columns = np.intersect1d(np.intersect1d(train_same, val_same,True), test_same, True)
+    train_data = np.delete(train_data,common_columns,axis=1)
+    validation_data = np.delete(validation_data,common_columns,axis=1)
+    test_data = np.delete(test_data,common_columns,axis=1)
+    num_features = train_data.shape[1]
+    assert(validation_data.shape[1] == num_features)
+    assert(test_data.shape[1] == num_features)
+    return train_data, validation_data, test_data
 
 def preprocess():
     mat = loadmat('mnist_all.mat') #loads the MAT object as a Dictionary
     # Data partition into the validation and training matrix - https://piazza.com/class/ii0wz7uvsf112m?cid=139
     #Pick a reasonable size for validation data
+    validation_size = 100
+    max_value = 255.0
+    n_output = 10
     train_data = np.array([])
     train_label = np.array([])
     validation_data = np.array([])
@@ -26,20 +50,21 @@ def preprocess():
     test_label = np.array([])
     for key, value in mat.iteritems():
       if not key.startswith("__"):
-        featureData = np.random.permutation(value.astype(np.float64)/255.0)
+        featureData = np.random.permutation(value.astype(np.float64)/max_value)
         num = int(key[-1])
         numSamples = value.shape[0]
-        labelData = np.zeros((numSamples,10),dtype = np.uint8)
+        labelData = np.zeros((numSamples,n_output),dtype = np.uint8)
         trueLabel = np.ones(numSamples)
         labelData[:,num] = trueLabel
         if 'test' in key:
           test_data = featureData if test_data.size == 0 else np.vstack([test_data, featureData])
           test_label = labelData if test_label.size == 0 else np.vstack([test_label, labelData])
         elif 'train' in key:
-          validation_data = featureData[:1000,:] if validation_data.size == 0 else np.vstack([validation_data,featureData[:1000]])
-          validation_label = labelData[:1000,:] if validation_label.size == 0 else np.vstack([validation_label,labelData[:1000]])
-          train_data = featureData[1000:,:] if train_data.size == 0 else np.vstack([train_data, featureData[1000:]])
-          train_label = labelData[1000:,:] if train_label.size == 0 else np.vstack([train_label, labelData[1000:]])
+          validation_data = featureData[:validation_size,:] if validation_data.size == 0 else np.vstack([validation_data,featureData[:validation_size]])
+          validation_label = labelData[:validation_size,:] if validation_label.size == 0 else np.vstack([validation_label,labelData[:validation_size]])
+          train_data = featureData[validation_size:,:] if train_data.size == 0 else np.vstack([train_data, featureData[validation_size:]])
+          train_label = labelData[validation_size:,:] if train_label.size == 0 else np.vstack([train_label, labelData[validation_size:]])
+    train_data, validation_data, test_data = featureSelection(train_data, validation_data, test_data)
     return train_data, train_label, validation_data, validation_label, test_data, test_label
     
 # Where do the weights get updated? https://piazza.com/class/ii0wz7uvsf112m?cid=117
@@ -144,16 +169,13 @@ def nnPredict(w1,w2,data):
     labels = np.array(res_matx)
     # Related Piazza posts: https://piazza.com/class/ii0wz7uvsf112m?cid=128
     return labels
-    
 
 def predictDiff(predicted, actual):
   predictions = {}
-  #print("number\tactual\tpredicted")
   for i in range(10):
     ac = np.count_nonzero(actual[:,i])
     pc = np.count_nonzero(predicted[:,i])
     predictions[str(i)] = { 'actual' : ac, 'predicted' : pc}
-    #print(i,"\t",ac,"\t",pc)
   return predictions
 
 
@@ -204,20 +226,20 @@ predicted_label = nnPredict(w1,w2,train_data)
 
 #find the accuracy on Training Dataset
 accuracy = str(100*np.mean((predicted_label == train_label).astype(float)))
-print('\nTraining set Accuracy:' + accuracy + '%')
+#print('\nTraining set Accuracy:' + accuracy + '%')
 temp["Training"] = { 'predictions': predictDiff(predicted_label, train_label), 'accuracy' :accuracy }
 
 predicted_label = nnPredict(w1,w2,validation_data)
 accuracy = str(100*np.mean((predicted_label == validation_label).astype(float)))
 #find the accuracy on Validation Dataset
-print('\nValidation set Accuracy:' + accuracy + '%')
+#print('\nValidation set Accuracy:' + accuracy + '%')
 temp["Validation"] ={ 'predictions' :predictDiff(predicted_label, validation_label), 'accuracy' :accuracy }
 
 
 predicted_label = nnPredict(w1,w2,test_data)
 accuracy = str(100*np.mean((predicted_label == test_label).astype(float)))
 #find the accuracy on Validation Dataset
-print('\nTest set Accuracy:' + accuracy + '%')
+#print('\nTest set Accuracy:' + accuracy + '%')
 temp["Testing"] ={ 'predictions' : predictDiff(predicted_label, test_label), 'accuracy' :accuracy }
 gpredictions[key] = temp
-print("\n\n\npredictions:\n",gpredictions)
+print("\n",gpredictions,"\n")
