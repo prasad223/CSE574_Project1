@@ -70,7 +70,7 @@ def preprocess():
           train_data = featureData[validation_size:,:] if train_data.size == 0 else np.vstack([train_data, featureData[validation_size:]])
           train_label = labelData[validation_size:,:] if train_label.size == 0 else np.vstack([train_label, labelData[validation_size:]])
     train_data, validation_data, test_data = featureSelection(train_data, validation_data, test_data)
-    return train_data, convertMatrixtoVector(train_label), validation_data, validation_label, test_data, test_label
+    return train_data, train_label, validation_data, validation_label, test_data, test_label
     
 # Where do the weights get updated? https://piazza.com/class/ii0wz7uvsf112m?cid=117
 # https://piazza.com/class/ii0wz7uvsf112m?cid=116
@@ -162,6 +162,7 @@ def nnPredict(w1,w2,data):
     o = sigmoid(np.dot(z, w2.transpose()))
     #Calculate the max in every row which gives the actual digit recognized
     ind_matrix = np.argmax(o, axis = 1)
+    """
     res_matx = np.zeros((ind_matrix.shape[0],o.shape[1]))
     #Counter to keep track of index of column with max value in each row of indices matrix indMatx
     i = 0
@@ -173,7 +174,9 @@ def nnPredict(w1,w2,data):
 
     labels = np.array(res_matx)
     # Related Piazza posts: https://piazza.com/class/ii0wz7uvsf112m?cid=128
-    return convertMatrixtoVector(labels)
+    """
+    labels = ind_matrix
+    return labels
 
 def predictDiff(predicted, actual):
   predictions = {}
@@ -182,7 +185,7 @@ def predictDiff(predicted, actual):
     pc = np.count_nonzero(predicted[:,i])
     predictions[str(i)] = { 'actual' : ac, 'predicted' : pc}
   return predictions
-
+"""
 def convertMatrixtoVector(m):
     res_vec = []
     for i in range(m.shape[0]):
@@ -190,7 +193,7 @@ def convertMatrixtoVector(m):
         res_vec.append(''.join(str(elem) for elem in m[i]))
 
     return np.matrix(res_vec).transpose()
-
+"""
 
 
 """**************Neural Network Script Starts here********************************"""
