@@ -4,15 +4,15 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.io import loadmat
 from math import sqrt
-import sys
+from sys import argv
 import json
 from scipy.special import expit
 from itertools import product
 from time import process_time as ptime
 from time import time
+import datetime
 
-#Variable to keep track of iterations count while collecting performance statistics
-iterationCount = 1
+train_matrix_label = None
 
 def initializeWeights(n_in,n_out):
     epsilon = sqrt(6) / sqrt(n_in + n_out + 1)
@@ -43,6 +43,7 @@ def featureSelection(train_data, validation_data, test_data):
     return train_data, validation_data, test_data
 
 def preprocess():
+    global train_matrix_label
     mat = loadmat('mnist_all.mat') #loads the MAT object as a Dictionary
     # Data partition into the validation and training matrix - https://piazza.com/class/ii0wz7uvsf112m?cid=139
     #Pick a reasonable size for validation data
@@ -54,13 +55,16 @@ def preprocess():
     validation_label = np.array([],dtype=np.uint8)
     test_data = np.array([],dtype=np.float)
     test_label = np.array([],dtype=np.uint8)
-    matrix_train_label = np.array([],dtype = np.uint8)
+    train_matrix_label = np.array([],dtype = np.uint8)
     for key, value in mat.items():
       if not key.startswith("__"):
         featureData = np.random.permutation(value.astype(np.float64)/max_value)
         numSamples = value.shape[0]
+        result = np.uint8(int(key[-1]))
         labelData = np.empty(numSamples,dtype = np.uint8)
-        labelData.fill(np.uint8(int(key[-1])))
+        labelData.fill(result)
+        matrix_label = np.zeros((numSamples - validation_size,10),dtype = np.uint8)
+        matrix_label[:,result] = 1
         if 'test' in key:
           test_data = featureData if test_data.size == 0 else np.vstack([test_data, featureData])
           test_label = np.append(test_label, labelData)
@@ -69,17 +73,9 @@ def preprocess():
           train_data = featureData[validation_size:,:] if train_data.size == 0 else np.vstack([train_data, featureData[validation_size:]])
           validation_label = np.append(validation_label, labelData[:validation_size])
           train_label = np.append(train_label, labelData[validation_size:])
+          train_matrix_label = matrix_label if train_matrix_label.size == 0 else np.vstack([train_matrix_label,matrix_label])
     train_data, validation_data, test_data = featureSelection(train_data, validation_data, test_data)
     return train_data, train_label, validation_data, validation_label, test_data, test_label
-
-def getMatrixLabel(train_label):
-    matrix_train_label = np.array([],dtype=np.uint8)
-    counts = np.bincount(train_label)
-    for i in range(10):
-      zero = np.zeros((counts[i],10),dtype = np.uint8)
-      zero[:,i] = np.uint8(1)
-      matrix_train_label = zero if matrix_train_label.size == 0 else np.vstack([matrix_train_label, zero])
-    return matrix_train_label
 
 # Where do the weights get updated? https://piazza.com/class/ii0wz7uvsf112m?cid=117
 # https://piazza.com/class/ii0wz7uvsf112m?cid=116
@@ -118,6 +114,8 @@ def nnObjFunction(params, *args):
     % w2: matrix of weights of connections from hidden layer to output layers.
     %     w2(i, j) represents the weight of connection from unit j in hidden 
     %     layer to unit i in output layer."""
+
+    global train_matrix_label
     n_input, n_hidden, n_class, training_data, training_label, lambdaval = args
     w1 = params[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
     w2 = params[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
@@ -129,7 +127,7 @@ def nnObjFunction(params, *args):
     z1 = np.column_stack([z1, np.ones(z1.shape[0], dtype = np.float64)])
     o1 = sigmoid(np.dot(z1, w2.T))
 
-    y_ol_diff = getMatrixLabel(training_label) - o1
+    y_ol_diff = train_matrix_label - o1
     J = np.sum(np.sum(np.square(y_ol_diff),axis=1)*0.5) * (1.0/n_samples)
     lamb = lambdaval / (2.0 * n_samples)
     obj_val = J + lamb * (np.square(w1).sum() + np.square(w2).sum()) 
@@ -174,71 +172,63 @@ def nnPredict(w1,w2,data):
     return np.argmax(o, axis = 1)
 
 """**************Neural Network Script Starts here********************************"""
-train_data, train_label, validation_data,validation_label, test_data, test_label = None, None, None, None, None, None
-
-def callPreprocess():
-    global train_data, train_label, validation_data,validation_label, test_data, test_label
-    train_data, train_label, validation_data,validation_label, test_data, test_label = preprocess()
     
-def main(hc, lambd):
-    global train_data, train_label, validation_data,validation_label, test_data, test_label
-    data = {}
-    n_input = train_data.shape[1]
-    n_hidden = hc
-    n_class = 10
+fileName = "_".join(["out",argv[1],argv[2],str(int(time())),".out"])
+f = open(fileName,"w")
+f.write("Start: "+str(datetime.datetime.now())+"\n")
+start = ptime()
+train_data, train_label, validation_data,validation_label, test_data, test_label = preprocess()
+n_input = train_data.shape[1]
+n_hidden = int(argv[1])
+n_class = 10
+lambdaval = float(argv[2])
+f.write("Hidden count: "+argv[1]+" lambda: "+argv[2]+"\n")
+print("Hidden count: "+argv[1]+" lambda: "+argv[2])
+# initialize the weights into some random matrices
+initial_w1 = initializeWeights(n_input, n_hidden)
+initial_w2 = initializeWeights(n_hidden, n_class)
 
-    # initialize the weights into some random matrices
-    initial_w1 = initializeWeights(n_input, n_hidden)
-    initial_w2 = initializeWeights(n_hidden, n_class)
+# unroll 2 weight matrices into single column vector
+initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()),0)
+args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
+opts = {'maxiter' : 50}    # Preferred value.
+nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method='CG', options=opts)
+#Reshape nnParams from 1D vector into w1 and w2 matrices
+w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
+w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 
-    # unroll 2 weight matrices into single column vector
-    initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()),0)
-    lambdaval = lambd
-    args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
-    opts = {'maxiter' : 50}    # Preferred value.
-    nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method='CG', options=opts)
-    #Reshape nnParams from 1D vector into w1 and w2 matrices
-    w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
-    w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
-    # Test the computed parameters
-    predicted_label = nnPredict(w1,w2,train_data)
+# Test the computed parameters
+predicted_label = nnPredict(w1,w2,train_data)
 
-    #find the accuracy on Training Dataset
-    accuracy = str(100*np.mean((predicted_label == train_label).astype(float)))
-    data["Training"] = {"accuracy" : accuracy, "actual" : np.bincount(train_label).tolist(), "predicted" : np.bincount(predicted_label).tolist()}
-    #print('\nTraining set Accuracy:' + accuracy + '%')
-    predicted_label = nnPredict(w1,w2,validation_data)
-    accuracy = str(100*np.mean((predicted_label == validation_label).astype(float)))
-    data["Validation"] = {"accuracy" : accuracy, "actual" : np.bincount(validation_label).tolist(), "predicted" : np.bincount(predicted_label).tolist()}
-    #find the accuracy on Validation Dataset
-    #print('\nValidation set Accuracy:' + accuracy + '%')
-    predicted_label = nnPredict(w1,w2,test_data)
-    accuracy = str(100*np.mean((predicted_label == test_label).astype(float)))
-    data["Testing"] = {"accuracy" : accuracy, "actual" : np.bincount(test_label).tolist(), "predicted" : np.bincount(predicted_label).tolist()}
-    #find the accuracy on Validation Dataset
-    #print('\nTest set Accuracy:' + accuracy + '%')
-    print(data)
-    return data
+#find the accuracy on Training Dataset
+accuracy = str(100*np.mean((predicted_label == train_label).astype(float)))
 
-def train_nueral_network():
-    #print('\nTest set Accuracy:' + accuracy + '%')
-    callPreprocess()
-    logs = {}
-    try:
-     for hc,lamb in product(range(4,24,4),np.linspace(0,1,11)):
-      print("round: ",hc,lamb)
-      start = ptime()
-      results = main(hc,lamb)
-      end = ptime() - start
-      if not hc in logs:
-        logs[hc] = {}
-      logs[hc][lamb] = { "Results" : results, "Time" : end}
-      print(logs[hc])
-      #raise
-    finally:
-      f = open("out_"+str(int(time()))+".json","w")
-      json.dump(logs,f)
-      f.close()
-      
-if __name__ == '__main__':
-    train_nueral_network()
+f.write( "Train_label: "+','.join([str(x) for x in train_label.tolist()])+"\n")
+f.write("predicted_label: "+','.join([str(x) for x in predicted_label.tolist()]) + "\n")
+f.write("Accuracy: "+accuracy+"\n")
+f.write("Train_label_count:"+','.join([str(x) for x in np.bincount(train_label).tolist()])+"\n")
+f.write("predicted_label_count:"+','.join([str(x) for x in np.bincount(predicted_label).tolist()])+"\n")
+print('\nTraining set Accuracy:' + accuracy + '%')
+
+#find the accuracy on Validation Dataset
+predicted_label = nnPredict(w1,w2,validation_data)
+accuracy = str(100*np.mean((predicted_label == validation_label).astype(float)))
+f.write( "Train_label: "+','.join([str(x) for x in train_label.tolist()])+"\n")
+f.write("predicted_label: "+','.join([str(x) for x in predicted_label.tolist()]) + "\n")
+f.write("Accuracy: "+accuracy+"\n")
+f.write("Validation_label_count:"+','.join([str(x) for x in np.bincount(validation_label).tolist()])+"\n")
+f.write("predicted_label_count:"+','.join([str(x) for x in np.bincount(predicted_label).tolist()])+"\n")
+
+print('\nValidation set Accuracy:' + accuracy + '%')
+
+predicted_label = nnPredict(w1,w2,test_data)
+accuracy = str(100*np.mean((predicted_label == test_label).astype(float)))
+f.write("Test_label: "+','.join([str(x) for x in train_label.tolist()])+"\n")
+f.write("predicted_label: "+','.join([str(x) for x in predicted_label.tolist()]) + "\n")
+f.write("Accuracy: "+accuracy+"\n")
+f.write("Test_label_count:"+','.join([str(x) for x in np.bincount(test_label).tolist()])+"\n")
+f.write("predicted_label_count:"+','.join([str(x) for x in np.bincount(predicted_label).tolist()])+"\n")
+print('\nTest set Accuracy:' + accuracy + '%')
+f.write("End: "+str(datetime.datetime.now())+"\n")
+f.write("Time_cousumed: "+str(ptime()-start)+"\n")
+f.close()
