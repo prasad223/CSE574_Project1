@@ -41,32 +41,40 @@ def preprocess():
     #Pick a reasonable size for validation data
     validation_size = 100
     max_value = 255.0
-    n_output = 10
-    train_data = np.array([])
-    train_label = np.array([])
-    validation_data = np.array([])
-    validation_label = np.array([])
-    test_data = np.array([])
-    test_label = np.array([])
-    for key, value in mat.iteritems():
+    train_data = np.array([],dtype=np.float)
+    train_label = np.array([],dtype=np.uint8)
+    validation_data = np.array([],dtype=np.float)
+    validation_label = np.array([],dtype=np.uint8)
+    test_data = np.array([],dtype=np.float)
+    test_label = np.array([],dtype=np.uint8)
+    matrix_train_label = np.array([],dtype = np.uint8)
+    for key, value in mat.items():
       if not key.startswith("__"):
         featureData = np.random.permutation(value.astype(np.float64)/max_value)
-        num = int(key[-1])
         numSamples = value.shape[0]
-        labelData = np.zeros((numSamples,n_output),dtype = np.uint8)
-        trueLabel = np.ones(numSamples)
-        labelData[:,num] = trueLabel
+        labelData = np.empty(numSamples,dtype = np.uint8)
+        labelData.fill(np.uint8(int(key[-1])))
         if 'test' in key:
           test_data = featureData if test_data.size == 0 else np.vstack([test_data, featureData])
-          test_label = labelData if test_label.size == 0 else np.vstack([test_label, labelData])
+          test_label = np.append(test_label, labelData)
         elif 'train' in key:
           validation_data = featureData[:validation_size,:] if validation_data.size == 0 else np.vstack([validation_data,featureData[:validation_size]])
-          validation_label = labelData[:validation_size,:] if validation_label.size == 0 else np.vstack([validation_label,labelData[:validation_size]])
           train_data = featureData[validation_size:,:] if train_data.size == 0 else np.vstack([train_data, featureData[validation_size:]])
-          train_label = labelData[validation_size:,:] if train_label.size == 0 else np.vstack([train_label, labelData[validation_size:]])
+          validation_label = np.append(validation_label, labelData[:validation_size])
+          train_label = np.append(train_label, labelData[validation_size:])
     train_data, validation_data, test_data = featureSelection(train_data, validation_data, test_data)
     return train_data, train_label, validation_data, validation_label, test_data, test_label
-    
+
+def getMatrixLabel(train_label):
+    matrix_train_label = np.array([],dtype=np.uint8)
+    counts = np.bincount(train_label)
+    for i in range(10):
+      zero = np.zeros((counts[i],10),dtype = np.uint8)
+      zero[:,i] = np.uint8(1)
+      print(zero.shape)
+      matrix_train_label = zero if matrix_train_label.size == 0 else np.vstack([matrix_train_label, zero])
+    return matrix_train_label
+
 # Where do the weights get updated? https://piazza.com/class/ii0wz7uvsf112m?cid=117
 # https://piazza.com/class/ii0wz7uvsf112m?cid=116
 def nnObjFunction(params, *args):
@@ -115,7 +123,7 @@ def nnObjFunction(params, *args):
     z1 = np.column_stack([z1, np.ones(z1.shape[0], dtype = np.float64)])
     o1 = sigmoid(np.dot(z1, w2.T))
 
-    y_ol_diff = training_label - o1
+    y_ol_diff = getMatrixLabel(training_label) - o1
     J = np.sum(np.sum(np.square(y_ol_diff),axis=1)*0.5) * (1.0/n_samples)
     lamb = lambdaval / (2.0 * n_samples)
     obj_val = J + lamb * (np.square(w1).sum() + np.square(w2).sum()) 
@@ -189,7 +197,7 @@ n_input = train_data.shape[1]
 n_hidden = int(argv[1])
                    
 # set the number of nodes in output unit
-n_class = train_label.shape[1]                  
+n_class = 10
 
 # initialize the weights into some random matrices
 initial_w1 = initializeWeights(n_input, n_hidden)
@@ -207,11 +215,6 @@ args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 opts = {'maxiter' : 50}    # Preferred value.
 
 nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method='CG', options=opts)
-
-#In Case you want to use fmin_cg, you may have to split the nnObjectFunction to two functions nnObjFunctionVal
-#and nnObjGradient. Check documentation for this function before you proceed.
-#nn_params, cost = fmin_cg(nnObjFunctionVal, initialWeights, nnObjGradient,args = args, maxiter = 50)
-
 
 #Reshape nnParams from 1D vector into w1 and w2 matrices
 w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
