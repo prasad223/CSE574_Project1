@@ -6,6 +6,11 @@ from scipy.io import loadmat
 from math import sqrt
 from sys import argv
 from scipy.special import expit
+from time import clock
+from datetime import datetime
+
+#Variable to keep track of iterations count while collecting performance statistics
+iterationCount = 1
 
 def initializeWeights(n_in,n_out):
     epsilon = sqrt(6) / sqrt(n_in + n_out + 1)
@@ -39,7 +44,7 @@ def preprocess():
     mat = loadmat('mnist_all.mat') #loads the MAT object as a Dictionary
     # Data partition into the validation and training matrix - https://piazza.com/class/ii0wz7uvsf112m?cid=139
     #Pick a reasonable size for validation data
-    validation_size = 100
+    validation_size = 500
     max_value = 255.0
     n_output = 10
     train_data = np.array([])
@@ -65,7 +70,7 @@ def preprocess():
           train_data = featureData[validation_size:,:] if train_data.size == 0 else np.vstack([train_data, featureData[validation_size:]])
           train_label = labelData[validation_size:,:] if train_label.size == 0 else np.vstack([train_label, labelData[validation_size:]])
     train_data, validation_data, test_data = featureSelection(train_data, validation_data, test_data)
-    return train_data, train_label, validation_data, validation_label, test_data, test_label
+    return train_data, convertMatrixtoVector(train_label), validation_data, validation_label, test_data, test_label
     
 # Where do the weights get updated? https://piazza.com/class/ii0wz7uvsf112m?cid=117
 # https://piazza.com/class/ii0wz7uvsf112m?cid=116
@@ -168,7 +173,7 @@ def nnPredict(w1,w2,data):
 
     labels = np.array(res_matx)
     # Related Piazza posts: https://piazza.com/class/ii0wz7uvsf112m?cid=128
-    return labels
+    return convertMatrixtoVector(labels)
 
 def predictDiff(predicted, actual):
   predictions = {}
@@ -178,68 +183,112 @@ def predictDiff(predicted, actual):
     predictions[str(i)] = { 'actual' : ac, 'predicted' : pc}
   return predictions
 
+def convertMatrixtoVector(m):
+    res_vec = []
+    for i in range(m.shape[0]):
+        print(m[i])
+        res_vec.append(''.join(str(elem) for elem in m[i]))
+
+    return np.matrix(res_vec).transpose()
+
+
 
 """**************Neural Network Script Starts here********************************"""
-
-train_data, train_label, validation_data,validation_label, test_data, test_label = preprocess()
-#  Train Neural Network
-# set the number of nodes in input unit (not including bias unit)
-n_input = train_data.shape[1] 
-# set the number of nodes in hidden unit (not including bias unit)
-n_hidden = int(argv[1])
-                   
-# set the number of nodes in output unit
-n_class = train_label.shape[1]                  
-
-# initialize the weights into some random matrices
-initial_w1 = initializeWeights(n_input, n_hidden)
-initial_w2 = initializeWeights(n_hidden, n_class)
-
-# unroll 2 weight matrices into single column vector
-initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()),0)
-
-# set the regularization hyper-parameter
-lambdaval = float(argv[2])
-args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
-
-#Train Neural Network using fmin_cg or minimize from scipy,optimize module. Check documentation for a working example
-
-opts = {'maxiter' : 50}    # Preferred value.
-
-nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method='CG', options=opts)
-
-#In Case you want to use fmin_cg, you may have to split the nnObjectFunction to two functions nnObjFunctionVal
-#and nnObjGradient. Check documentation for this function before you proceed.
-#nn_params, cost = fmin_cg(nnObjFunctionVal, initialWeights, nnObjGradient,args = args, maxiter = 50)
+def runProgram(hc, lambd):
+    print("In Iteration with lambda = %.1f and hiddenLCount = %d" %(lambd,hc))
+    print("current Time: ",datetime.now())
+    global iterationCount
+    print("%.2f %% done" % (iterationCount/55.0 * 100))
+    iterationCount+= 1
 
 
-#Reshape nnParams from 1D vector into w1 and w2 matrices
-w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
-w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
+    preProcessTimeStart = clock()
+    train_data, train_label, validation_data,validation_label, test_data, test_label = preprocess()
+    preProcessTimeEnd = clock()
+    #  Train Neural Network
+    # set the number of nodes in input unit (not including bias unit)
+    n_input = train_data.shape[1]
+    # set the number of nodes in hidden unit (not including bias unit)
+    #n_hidden = int(argv[1])
+    n_hidden = int(hc)
 
-gpredictions = {}
-key = '_'.join(argv[1:])
+    # set the number of nodes in output unit
+    n_class = train_label.shape[1]
 
-temp = {}
-# Test the computed parameters
-predicted_label = nnPredict(w1,w2,train_data)
+    # initialize the weights into some random matrices
+    initial_w1 = initializeWeights(n_input, n_hidden)
+    initial_w2 = initializeWeights(n_hidden, n_class)
 
-#find the accuracy on Training Dataset
-accuracy = str(100*np.mean((predicted_label == train_label).astype(float)))
-#print('\nTraining set Accuracy:' + accuracy + '%')
-temp["Training"] = { 'predictions': predictDiff(predicted_label, train_label), 'accuracy' :accuracy }
+    # unroll 2 weight matrices into single column vector
+    initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()),0)
 
-predicted_label = nnPredict(w1,w2,validation_data)
-accuracy = str(100*np.mean((predicted_label == validation_label).astype(float)))
-#find the accuracy on Validation Dataset
-#print('\nValidation set Accuracy:' + accuracy + '%')
-temp["Validation"] ={ 'predictions' :predictDiff(predicted_label, validation_label), 'accuracy' :accuracy }
+    # set the regularization hyper-parameter
+    #lambdaval = float(argv[2])
+    lambdaval = float(lambd)
+    args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
+
+    #Train Neural Network using fmin_cg or minimize from scipy,optimize module. Check documentation for a working example
+
+    opts = {'maxiter' : 50}    # Preferred value.
+
+    convergenceTimeStart = clock()
+    nn_params = minimize(nnObjFunction, initialWeights, jac=True, args=args, method='CG', options=opts)
+    convergenceTimeEnd = clock()
+
+    #In Case you want to use fmin_cg, you may have to split the nnObjectFunction to two functions nnObjFunctionVal
+    #and nnObjGradient. Check documentation for this function before you proceed.
+    #nn_params, cost = fmin_cg(nnObjFunctionVal, initialWeights, nnObjGradient,args = args, maxiter = 50)
 
 
-predicted_label = nnPredict(w1,w2,test_data)
-accuracy = str(100*np.mean((predicted_label == test_label).astype(float)))
-#find the accuracy on Validation Dataset
-#print('\nTest set Accuracy:' + accuracy + '%')
-temp["Testing"] ={ 'predictions' : predictDiff(predicted_label, test_label), 'accuracy' :accuracy }
-gpredictions[key] = temp
-print("\n",gpredictions,"\n")
+    #Reshape nnParams from 1D vector into w1 and w2 matrices
+    w1 = nn_params.x[0:n_hidden * (n_input + 1)].reshape( (n_hidden, (n_input + 1)))
+    w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
+
+    #gpredictions = {}
+    #key = '_'.join(argv[1:])
+
+    tempJSON = {}
+    # Test the computed parameters
+    predicted_label = nnPredict(w1,w2,train_data)
+
+    #find the accuracy on Training Dataset
+    accuracy = str(100*np.mean((predicted_label == train_label).astype(float)))
+    #print('\nTraining set Accuracy:' + accuracy + '%')
+    #temp["Training"] = { 'predictions': predictDiff(predicted_label, train_label), 'accuracy' :accuracy }
+    tempJSON["TrainingAccuracy"] = accuracy
+
+    predicted_label = nnPredict(w1,w2,validation_data)
+    accuracy = str(100*np.mean((predicted_label == validation_label).astype(float)))
+    #find the accuracy on Validation Dataset
+    #print('\nValidation set Accuracy:' + accuracy + '%')
+    #temp["Validation"] ={ 'predictions' :predictDiff(predicted_label, validation_label), 'accuracy' :accuracy }
+    tempJSON["ValidationAccuracy"] = accuracy
+
+
+    predicted_label = nnPredict(w1,w2,test_data)
+    accuracy = str(100*np.mean((predicted_label == test_label).astype(float)))
+    #find the accuracy on Validation Dataset
+    #print('\nTest set Accuracy:' + accuracy + '%')
+    #temp["Testing"] ={ 'predictions' : predictDiff(predicted_label, test_label), 'accuracy' :accuracy }
+    programEndTime = clock()
+    tempJSON["TestingAccuracy"] = accuracy
+    tempJSON["lambdaVal"] = lambdaval
+    tempJSON["hiddenLCount"] = n_hidden
+    tempJSON["preProcessTimeInSec"] = preProcessTimeEnd - preProcessTimeStart
+    tempJSON["convergenceTimeInSec"] = convergenceTimeEnd - convergenceTimeStart
+    tempJSON["totalTimeInSec"] = programEndTime - preProcessTimeStart
+    #gpredictions[key] = temp
+    #print("\n",gpredictions,"\n")
+    return tempJSON
+
+"""
+#Run the below loop to collect data to analyze
+jsonArr = []
+for hc in range(4,21,41):
+    for lambd in np.arange(0,1.1,1.0):
+        jsonArr.append(runProgram(hc, lambd))
+
+print(jsonArr)
+"""
+
+print(runProgram(12,0.7))
