@@ -8,6 +8,7 @@ do
     lmb='0.'$l
     echo `time python $script_name $hc $lmb`
   done
+  echo `time python $script_name $hc 1.0`
 done
-echo `time python $script_name 20 1.0`
+
 
