@@ -11,6 +11,7 @@ from itertools import product
 from time import process_time as ptime
 from time import time
 import datetime
+import pickle
 
 train_matrix_label = None
 
@@ -172,18 +173,15 @@ def nnPredict(w1,w2,data):
     return np.argmax(o, axis = 1)
 
 """**************Neural Network Script Starts here********************************"""
-    
-fileName = "_".join(["out",argv[1],argv[2],str(int(time())),".out"])
-f = open(fileName,"w")
-f.write("Start: "+str(datetime.datetime.now())+"\n")
-start = ptime()
+
+pickle_data = []
+
 train_data, train_label, validation_data,validation_label, test_data, test_label = preprocess()
 n_input = train_data.shape[1]
-n_hidden = int(argv[1])
+n_hidden = 12
 n_class = 10
-lambdaval = float(argv[2])
-f.write("Hidden count: "+argv[1]+" lambda: "+argv[2]+"\n")
-print("Hidden count: "+argv[1]+" lambda: "+argv[2])
+lambdaval = 0.5
+print("Hidden count: ",n_hidden," lambda: ",lambdaval)
 # initialize the weights into some random matrices
 initial_w1 = initializeWeights(n_input, n_hidden)
 initial_w2 = initializeWeights(n_hidden, n_class)
@@ -203,32 +201,20 @@ predicted_label = nnPredict(w1,w2,train_data)
 #find the accuracy on Training Dataset
 accuracy = str(100*np.mean((predicted_label == train_label).astype(float)))
 
-f.write( "Train_label: "+','.join([str(x) for x in train_label.tolist()])+"\n")
-f.write("predicted_label: "+','.join([str(x) for x in predicted_label.tolist()]) + "\n")
-f.write("Accuracy: "+accuracy+"\n")
-f.write("Train_label_count:"+','.join([str(x) for x in np.bincount(train_label).tolist()])+"\n")
-f.write("predicted_label_count:"+','.join([str(x) for x in np.bincount(predicted_label).tolist()])+"\n")
 print('\nTraining set Accuracy:' + accuracy + '%')
 
 #find the accuracy on Validation Dataset
 predicted_label = nnPredict(w1,w2,validation_data)
 accuracy = str(100*np.mean((predicted_label == validation_label).astype(float)))
-f.write( "Train_label: "+','.join([str(x) for x in train_label.tolist()])+"\n")
-f.write("predicted_label: "+','.join([str(x) for x in predicted_label.tolist()]) + "\n")
-f.write("Accuracy: "+accuracy+"\n")
-f.write("Validation_label_count:"+','.join([str(x) for x in np.bincount(validation_label).tolist()])+"\n")
-f.write("predicted_label_count:"+','.join([str(x) for x in np.bincount(predicted_label).tolist()])+"\n")
 
 print('\nValidation set Accuracy:' + accuracy + '%')
 
 predicted_label = nnPredict(w1,w2,test_data)
 accuracy = str(100*np.mean((predicted_label == test_label).astype(float)))
-f.write("Test_label: "+','.join([str(x) for x in train_label.tolist()])+"\n")
-f.write("predicted_label: "+','.join([str(x) for x in predicted_label.tolist()]) + "\n")
-f.write("Accuracy: "+accuracy+"\n")
-f.write("Test_label_count:"+','.join([str(x) for x in np.bincount(test_label).tolist()])+"\n")
-f.write("predicted_label_count:"+','.join([str(x) for x in np.bincount(predicted_label).tolist()])+"\n")
 print('\nTest set Accuracy:' + accuracy + '%')
-f.write("End: "+str(datetime.datetime.now())+"\n")
-f.write("Time_cousumed: "+str(ptime()-start)+"\n")
-f.close()
+
+pickle_data.append(n_hidden)
+pickle_data.append(w1)
+pickle_data.append(w2)
+pickle_data.append(lambdaval)
+pickle.dump(pickle_data,open("params.pickle","wb"))
